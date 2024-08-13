@@ -12,6 +12,7 @@ const EditEvent = () => {
   const [date, setDate] = useState('');
   const [location, setLocation] = useState('');
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -31,6 +32,8 @@ const EditEvent = () => {
       } catch (err) {
         console.error('Error fetching event:', err);
         setError('Failed to load event');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -53,6 +56,8 @@ const EditEvent = () => {
       setError('Failed to update event');
     }
   };
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="edit-event-container">

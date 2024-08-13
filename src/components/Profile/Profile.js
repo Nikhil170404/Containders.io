@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { updateUser } from '../../redux/actions/authAction';
+import { updateUser, checkUsernameAvailability } from '../../redux/actions/authAction';
 import { fetchWallet } from '../../redux/actions/walletAction';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { firestore, storage } from '../../firebase';
@@ -12,16 +12,18 @@ const Profile = () => {
   const { balance } = useSelector((state) => state.wallet);
   const dispatch = useDispatch();
 
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(true); // Enforce editing on first login
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
     age: user?.age || '',
     bio: user?.bio || '',
     profileImage: user?.profileImage || '',
-    gameUid: user?.gameUid || '',
+    gameUids: user?.gameUids || {},
+    username: user?.username || '' // Username field
   });
   const [file, setFile] = useState(null);
+  const [usernameError, setUsernameError] = useState('');
 
   const fetchUserProfile = useCallback(() => {
     if (user?.uid) {
@@ -40,7 +42,18 @@ const Profile = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleGameUidChange = (e, game) => {
+    const { value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      gameUids: { ...prev.gameUids, [game]: value }
+    }));
   };
 
   const handleFileChange = (e) => {
@@ -48,6 +61,18 @@ const Profile = () => {
   };
 
   const handleSave = async () => {
+    if (!formData.username) {
+      setUsernameError('Username is required');
+      return;
+    }
+
+    // Check for unique username
+    const isUsernameAvailable = await dispatch(checkUsernameAvailability(formData.username));
+    if (!isUsernameAvailable) {
+      setUsernameError('Username is already taken');
+      return;
+    }
+
     let profileImageUrl = formData.profileImage;
 
     if (file) {
@@ -76,7 +101,7 @@ const Profile = () => {
       <img src={formData.profileImage || 'default-profile.png'} alt="Profile" className="profile-image" />
       {isEditing ? (
         <div className="profile-edit-form">
-          {['name', 'email', 'age', 'bio', 'gameUid'].map((field) => (
+          {['name', 'email', 'age', 'bio'].map((field) => (
             <div key={field}>
               <label>{field.charAt(0).toUpperCase() + field.slice(1)}:</label>
               <input
@@ -88,6 +113,32 @@ const Profile = () => {
               />
             </div>
           ))}
+          <div>
+            <label>Username:</label>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+            />
+            {usernameError && <p className="error-text">{usernameError}</p>}
+          </div>
+          {Object.keys(formData.gameUids).map((game) => (
+            <div key={game}>
+              <label>{game} UID:</label>
+              <input
+                type="text"
+                value={formData.gameUids[game]}
+                onChange={(e) => handleGameUidChange(e, game)}
+              />
+            </div>
+          ))}
+          <label>Add Game UID:</label>
+          <input
+            type="text"
+            placeholder="Game Name"
+            onBlur={(e) => handleGameUidChange({ target: { value: '' } }, e.target.value)}
+          />
           <label>Profile Image:</label>
           <input type="file" accept="image/*" onChange={handleFileChange} />
           <div className="profile-edit-actions">
@@ -100,7 +151,10 @@ const Profile = () => {
           <p><strong>Email:</strong> {formData.email}</p>
           <p><strong>Age:</strong> {formData.age}</p>
           <p><strong>Bio:</strong> {formData.bio}</p>
-          <p><strong>Game UID:</strong> {formData.gameUid}</p>
+          <p><strong>Username:</strong> {formData.username}</p>
+          {Object.keys(formData.gameUids).map((game) => (
+            <p key={game}><strong>{game} UID:</strong> {formData.gameUids[game]}</p>
+          ))}
           <p><strong>Wallet Balance:</strong> ₹{balance || 0}</p>
           <button className="edit-button" onClick={() => setIsEditing(true)}>Edit Profile</button>
         </>

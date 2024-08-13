@@ -4,8 +4,8 @@ import { signup } from '../../redux/actions/authAction';
 import { Navigate } from 'react-router-dom';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../../firebase';
-import { FcGoogle } from 'react-icons/fc'; // Google icon from React Icons
-import './Auth.css'; // Import the CSS file
+import { FcGoogle } from 'react-icons/fc';
+import './Auth.css';
 
 const Signup = () => {
   const [email, setEmail] = useState('');
@@ -23,11 +23,15 @@ const Signup = () => {
       setLoading(true);
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      dispatch(signup({ email: user.email, name: user.displayName }));
+      
+      // If necessary, prompt for additional details like age
+      const additionalDetails = { age }; // or fetch through a prompt
+      dispatch(signup({ email: user.email, name: user.displayName, ...additionalDetails }));
       setMessage('Signup successful!');
     } catch (error) {
       console.error("Google sign-in error: ", error);
       setMessage('Signup failed, please try again.');
+    } finally {
       setLoading(false);
     }
   };

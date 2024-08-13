@@ -8,13 +8,14 @@ const EventDetail = () => {
   const { id } = useParams();
   const [event, setEvent] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchEvent = async () => {
       try {
         const eventRef = doc(firestore, 'events', id);
         const eventDoc = await getDoc(eventRef);
-        
+
         if (eventDoc.exists()) {
           setEvent(eventDoc.data());
         } else {
@@ -23,14 +24,16 @@ const EventDetail = () => {
       } catch (err) {
         console.error('Error fetching event:', err);
         setError('Failed to load event');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchEvent();
   }, [id]);
 
+  if (loading) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
-  if (!event) return <div>Loading...</div>;
 
   return (
     <div className="event-detail-container">
