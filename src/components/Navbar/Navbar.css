@@ -1,0 +1,248 @@
+/* General Styles */
+.navbar {
+  background-color: #1a1a1a;
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  position: relative;
+  transition: background-color 0.3s ease;
+}
+
+/* Hamburger Menu Styles */
+.navbar-toggle {
+  display: none; /* Hide on desktop by default */
+  flex-direction: column;
+  cursor: pointer;
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+}
+
+.hamburger {
+  width: 28px;
+  height: 20px;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.hamburger .line {
+  display: block;
+  width: 100%;
+  height: 3px;
+  background-color: #ffcc00;
+  position: absolute;
+  left: 0;
+  transition: background-color 0.3s ease;
+}
+
+.hamburger .line:nth-child(1) {
+  top: 0;
+}
+
+.hamburger .line:nth-child(2) {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.hamburger .line:nth-child(3) {
+  bottom: 0;
+}
+
+.hamburger.open .line:nth-child(1) {
+  transform: rotate(45deg);
+  top: 50%;
+}
+
+.hamburger.open .line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.open .line:nth-child(3) {
+  transform: rotate(-45deg);
+  bottom: 50%;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  display: none; /* Hide on all devices by default */
+  flex-direction: column;
+  width: 280px;
+  height: 100vh;
+  background-color: #2a2a2a;
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 1000; /* Ensure sidebar is on top */
+}
+
+.sidebar.active {
+  transform: translateX(0);
+}
+
+.sidebar-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: transparent;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  transition: color 0.3s ease;
+  z-index: 1100; /* Ensure close button is on top */
+}
+
+.sidebar-close:before {
+  content: '×'; /* Use a multiplication sign for the X */
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #fff; /* Default color */
+}
+
+.sidebar-close:hover:before {
+  color: #e74c3c; /* Change color on hover */
+}
+
+.sidebar-menu {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: 3rem; /* Ensure content is below close button */
+}
+
+.sidebar-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-item {
+  border-bottom: 1px solid #444;
+}
+
+.sidebar-link {
+  color: #f1f1f1;
+  text-decoration: none;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.3s ease;
+}
+
+.sidebar-link:hover {
+  background-color: #333;
+}
+
+.sidebar-label {
+  margin-left: 0.75rem;
+}
+
+/* Styles for different devices */
+@media (max-width: 768px) {
+  .navbar-toggle {
+    display: flex; /* Show hamburger on mobile */
+  }
+
+  .sidebar {
+    display: flex; /* Show sidebar on mobile */
+  }
+}
+
+@media (min-width: 769px) {
+  .navbar-toggle {
+    display: flex; /* Show hamburger on desktop */
+  }
+
+  .sidebar {
+    display: flex; /* Show sidebar on desktop */
+  }
+}
+
+/* Logout Button */
+.logout-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  padding: 0.75rem;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: background-color 0.3s ease;
+}
+
+.logout-btn:hover {
+  background-color: #c0392b;
+}
+/* Dropdown Container */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle {
+  background-color: #2a2a2a;
+  color: #f1f1f1;
+  padding: 1rem;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dropdown-toggle:hover {
+  background-color: #333;
+}
+
+.dropdown-toggle:focus {
+  outline: none;
+}
+
+.dropdown-toggle i {
+  margin-right: 0.75rem;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  background-color: #2a2a2a;
+  min-width: 200px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  margin-top: 0.5rem;
+}
+
+.dropdown-menu a {
+  color: #f1f1f1;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  display: block;
+  transition: background-color 0.3s ease;
+}
+
+.dropdown-menu a:hover {
+  background-color: #333;
+}
+
+.dropdown:hover .dropdown-menu {
+  display: block;
+}
+
+.dropdown-menu .fa {
+  margin-right: 0.5rem;
+}
+
+/* Additional styles for better visuals */
+.sidebar-item.dropdown {
+  border-bottom: none; /* Remove border from dropdown parent item */
+}
+
+.sidebar-item.dropdown .sidebar-link {
+  padding-right: 2rem; /* Adjust padding for dropdown item */
+}
