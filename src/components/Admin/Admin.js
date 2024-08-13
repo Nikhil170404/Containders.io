@@ -30,6 +30,7 @@ const AdminPanel = () => {
   const [participantsData, setParticipantsData] = useState({});
   const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [formError, setFormError] = useState(null);
 
   useEffect(() => {
     dispatch(fetchTournaments());
@@ -61,6 +62,22 @@ const AdminPanel = () => {
   };
 
   const handleSubmit = async () => {
+    setFormError(null);
+
+    // Validate form data
+    if (!formData.title || !formData.tournamentName || !formData.description) {
+      setFormError('Please fill in all required fields.');
+      return;
+    }
+    if (formData.isPaid && formData.entryFee <= 0) {
+      setFormError('Entry Fee must be greater than 0 for paid tournaments.');
+      return;
+    }
+    if (formData.participants <= 0 || formData.prizePool <= 0) {
+      setFormError('Participants and Prize Pool must be greater than 0.');
+      return;
+    }
+
     let imageUrl = '';
 
     if (formData.image) {
@@ -82,26 +99,31 @@ const AdminPanel = () => {
       roomPassword: formData.roomPassword,
     };
 
-    if (formData.currentTournamentId) {
-      await dispatch(updateTournament(formData.currentTournamentId, tournamentData));
-    } else {
-      await dispatch(addTournament(tournamentData));
-    }
+    try {
+      if (formData.currentTournamentId) {
+        await dispatch(updateTournament(formData.currentTournamentId, tournamentData));
+      } else {
+        await dispatch(addTournament(tournamentData));
+      }
 
-    // Clear the form after submission
-    setFormData({
-      title: '',
-      tournamentName: '',
-      description: '',
-      entryFee: 0,
-      participants: 0,
-      prizePool: 0,
-      image: null,
-      isPaid: true,
-      roomId: '',
-      roomPassword: '',
-      currentTournamentId: null,
-    });
+      // Clear the form after submission
+      setFormData({
+        title: '',
+        tournamentName: '',
+        description: '',
+        entryFee: 0,
+        participants: 0,
+        prizePool: 0,
+        image: null,
+        isPaid: true,
+        roomId: '',
+        roomPassword: '',
+        currentTournamentId: null,
+      });
+    } catch (error) {
+      console.error('Error handling tournament:', error);
+      setFormError('An error occurred while processing your request.');
+    }
   };
 
   const handleEditTournament = (tournament) => {
@@ -126,6 +148,7 @@ const AdminPanel = () => {
     <div className="admin-panel">
       <h1>Admin Panel</h1>
       <div className="admin-form">
+        {formError && <p className="form-error">{formError}</p>}
         {['title', 'tournamentName', 'description', 'entryFee', 'participants', 'prizePool', 'roomId', 'roomPassword'].map((field, index) => (
           <div className="form-group" key={index}>
             <label>{field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</label>

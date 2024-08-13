@@ -3,6 +3,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { fetchWallet, updateWallet } from '../../redux/actions/walletAction';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { firestore } from '../../firebase';
+import QRCode from 'qrcode.react';
+import Modal from 'react-modal';
 import './Wallet.css';
 
 const Wallet = () => {
@@ -10,6 +12,10 @@ const Wallet = () => {
   const [action, setAction] = useState('deposit');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [transactionId, setTransactionId] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [upiId, setUpiId] = useState('prashants1704@okicici'); // Replace with your UPI ID
 
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
@@ -20,6 +26,14 @@ const Wallet = () => {
       dispatch(fetchWallet());
     }
   }, [user, dispatch]);
+
+  const generateQRCode = () => {
+    if (action === 'deposit') {
+      const upiLink = `upi://pay?pa=${upiId}&pn=MerchantName&mc=0000&tid=1234567890&mt=999&am=${amount}&cu=INR&url=https://your-website.com`;
+      return upiLink;
+    }
+    return '';
+  };
 
   const handleTransaction = async (e) => {
     e.preventDefault();
@@ -47,44 +61,67 @@ const Wallet = () => {
         throw new Error('Insufficient funds');
       }
 
-      // Get a reference to the user's wallet document
-      const walletRef = doc(firestore, 'wallets', user.uid);
-
-      // Check if the wallet document exists
-      const walletDoc = await getDoc(walletRef);
-      if (walletDoc.exists()) {
-        // Document exists, update it
-        await updateDoc(walletRef, {
-          balance: newBalance,
-          transactions: arrayUnion({
-            amount: transactionAmount,
-            type: action,
-            date: new Date(),
-            details: action === 'deposit' ? 'User Deposit' : 'User Withdrawal'
-          })
-        });
-      } else {
-        // Document does not exist, create it
-        await setDoc(walletRef, {
-          balance: newBalance,
-          transactions: [{
-            amount: transactionAmount,
-            type: action,
-            date: new Date(),
-            details: action === 'deposit' ? 'User Deposit' : 'User Withdrawal'
-          }]
-        });
+      if (action === 'deposit') {
+        setShowQRCode(true);
+        setShowModal(true);
+        return;
       }
 
-      // Use updateWallet to update balance in Redux store
-      dispatch(updateWallet(newBalance));
-
-      setAmount('');
+      await processTransaction(newBalance, transactionAmount);
     } catch (error) {
       console.error('Error handling transaction:', error);
       setError(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const processTransaction = async (newBalance, transactionAmount) => {
+    const walletRef = doc(firestore, 'wallets', user.uid);
+    const walletDoc = await getDoc(walletRef);
+
+    if (walletDoc.exists()) {
+      await updateDoc(walletRef, {
+        balance: newBalance,
+        transactions: arrayUnion({
+          amount: transactionAmount,
+          type: action,
+          date: new Date(),
+          details: action === 'deposit' ? 'User Deposit' : 'User Withdrawal'
+        })
+      });
+    } else {
+      await setDoc(walletRef, {
+        balance: newBalance,
+        transactions: [{
+          amount: transactionAmount,
+          type: action,
+          date: new Date(),
+          details: action === 'deposit' ? 'User Deposit' : 'User Withdrawal'
+        }]
+      });
+    }
+
+    dispatch(updateWallet(newBalance));
+    setAmount('');
+  };
+
+  const handleTransactionIdSubmit = async (e) => {
+    e.preventDefault();
+    setShowModal(false);
+
+    try {
+      // Implement admin verification logic here
+
+      await processTransaction(parseFloat(wallet.balance) + parseFloat(amount), parseFloat(amount));
+      setTransactionId('');
+      alert('Deposit approved and wallet updated.');
+
+      // If rejected
+      // alert('Deposit rejected. Refund will be processed.');
+    } catch (error) {
+      console.error('Error verifying transaction ID:', error);
+      alert('Error processing transaction.');
     }
   };
 
@@ -112,6 +149,30 @@ const Wallet = () => {
         </button>
         {error && <p className="error">{error}</p>}
       </form>
+
+      <Modal
+        isOpen={showModal}
+        onRequestClose={() => setShowModal(false)}
+        contentLabel="Transaction Verification"
+      >
+        <h2>Transaction Verification</h2>
+        {showQRCode && (
+          <div>
+            <p>Scan this QR code to complete your deposit:</p>
+            <QRCode value={generateQRCode()} />
+          </div>
+        )}
+        <form onSubmit={handleTransactionIdSubmit}>
+          <input
+            type="text"
+            value={transactionId}
+            onChange={(e) => setTransactionId(e.target.value)}
+            placeholder="Enter transaction ID"
+          />
+          <button type="submit">Submit Transaction ID</button>
+        </form>
+        <button onClick={() => setShowModal(false)}>Close</button>
+      </Modal>
     </div>
   );
 };
