@@ -22,10 +22,12 @@ const Navbar = () => {
 
   const toggleCommunityDropdown = () => {
     setIsCommunityDropdownOpen((prev) => !prev);
+    setIsGroupDropdownOpen(false); // Close Group dropdown if open
   };
 
   const toggleGroupDropdown = () => {
     setIsGroupDropdownOpen((prev) => !prev);
+    setIsCommunityDropdownOpen(false); // Close Community dropdown if open
   };
 
   const handleClickOutside = (event) => {
@@ -56,7 +58,7 @@ const Navbar = () => {
     { to: '/home', icon: 'home', label: 'Home' },
     { to: '/aboutus', icon: 'info-circle', label: 'About' },
     { to: '/contactus', icon: 'envelope', label: 'Contact' },
-    { to: '/events', icon: 'calendar', label: 'Events' }, // Common events link
+    { to: '/events', icon: 'calendar', label: 'Events' }
   ];
 
   const userNavItems = [
@@ -69,7 +71,7 @@ const Navbar = () => {
       to: '#', icon: 'userpostss', label: 'Community', dropdown: true, dropdownItems: [
         { to: '/community', label: 'View Posts' },
         { to: '/events', label: 'Upcoming Events' },
-        { to: '/chat', label: 'Chat' }, // Added Chat link
+        { to: '/chat', label: 'Chat' },
         { to: '/groupmanagement', label: 'Groups' }
       ]
     },
@@ -78,9 +80,12 @@ const Navbar = () => {
 
   const adminNavItems = [
     ...userNavItems,
+    { to: '/transaction-requests', icon: 'list', label: 'Transaction Requests' },
+    { to: '/approve-reject-transaction', icon: 'check-circle', label: 'Approve/Reject Transactions' },
+    { to: '/admin-dashboard', icon: 'tachometer-alt', label: 'Admin Dashboard' },
     { to: '/create-event', icon: 'plus', label: 'Create Event' },
     { to: '/edit-event/:id', icon: 'edit', label: 'Edit Event' },
-    { to: '/events/:id', icon: 'info', label: 'Event Detail' },
+    { to: '/events/:id', icon: 'info', label: 'Event Detail' }
   ];
 
   return (
@@ -94,7 +99,7 @@ const Navbar = () => {
       </button>
       <div className={`sidebar ${isSidebarOpen ? 'active' : ''}`}>
         <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)}>
-          <span className="sr-only"></span>
+          <span className="sr-only">Close</span>
         </button>
         <div className="sidebar-menu">
           <ul className="sidebar-links">
