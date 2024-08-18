@@ -80,7 +80,7 @@ const Navbar = () => {
 
   const adminNavItems = [
     ...userNavItems,
-    { to: '/transaction-requests', icon: 'list', label: 'Transaction Requests' },
+    { to: '/admin/transactions', icon: 'list', label: 'Transaction Requests' },
     { to: '/approve-reject-transaction', icon: 'check-circle', label: 'Approve/Reject Transactions' },
     { to: '/admin-dashboard', icon: 'tachometer-alt', label: 'Admin Dashboard' },
     { to: '/create-event', icon: 'plus', label: 'Create Event' },
@@ -99,7 +99,7 @@ const Navbar = () => {
       </button>
       <div className={`sidebar ${isSidebarOpen ? 'active' : ''}`}>
         <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)}>
-          <span className="sr-only">Close</span>
+          <span className="sr-only"></span>
         </button>
         <div className="sidebar-menu">
           <ul className="sidebar-links">
