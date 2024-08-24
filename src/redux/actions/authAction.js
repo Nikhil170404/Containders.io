@@ -71,8 +71,9 @@ export const googleSignIn = () => async (dispatch) => {
 
 // Action for user signup
 export const signup = (userData) => async (dispatch) => {
+  dispatch({ type: 'SIGNUP_REQUEST' });
   try {
-    const { email, password, name, age, bio, username } = userData;
+    const { email, password, name, age, bio = '', username = '' } = userData;
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     const isAdmin = user.uid === ADMIN_UID;
@@ -97,11 +98,13 @@ export const signup = (userData) => async (dispatch) => {
     localStorage.setItem('lastActivity', new Date().toString());
   } catch (error) {
     dispatch({ type: 'SIGNUP_FAILURE', payload: error.message });
+    console.error('Signup failed:', error.message);
   }
 };
 
 // Action for user logout
 export const logout = () => async (dispatch) => {
+  dispatch({ type: 'LOGOUT_REQUEST' });
   try {
     await signOut(auth);
     dispatch({ type: 'LOGOUT_SUCCESS' });
@@ -109,13 +112,15 @@ export const logout = () => async (dispatch) => {
     localStorage.removeItem('lastActivity');
   } catch (error) {
     dispatch({ type: 'LOGOUT_FAILURE', payload: error.message });
+    console.error('Logout failed:', error.message);
   }
 };
 
 // Action for updating user profile
 export const updateUser = (uid, userData) => async (dispatch) => {
+  dispatch({ type: 'UPDATE_USER_REQUEST' });
   try {
-    const { name, age, bio, profileImage, gameUids, username } = userData;
+    const { name, age, bio = '', profileImage, gameUids = [], username = '' } = userData;
 
     const user = auth.currentUser;
     if (user) {
@@ -128,6 +133,7 @@ export const updateUser = (uid, userData) => async (dispatch) => {
     dispatch({ type: 'UPDATE_USER_SUCCESS', payload: { uid, name, age, bio, profileImage, gameUids, username } });
   } catch (error) {
     dispatch({ type: 'UPDATE_USER_FAILURE', payload: error.message });
+    console.error('Profile update failed:', error.message);
   }
 };
 
@@ -139,6 +145,7 @@ export const setUser = (user) => ({
 
 // Action to purchase a game
 export const purchaseGame = (gameName) => async (dispatch, getState) => {
+  dispatch({ type: 'PURCHASE_GAME_REQUEST' });
   try {
     const state = getState();
     const user = state.auth.user;
@@ -162,6 +169,7 @@ export const purchaseGame = (gameName) => async (dispatch, getState) => {
     dispatch({ type: 'PURCHASE_GAME_SUCCESS', payload: { gameName } });
   } catch (error) {
     dispatch({ type: 'PURCHASE_GAME_FAILURE', payload: error.message });
+    console.error('Game purchase failed:', error.message);
   }
 };
 
@@ -186,6 +194,7 @@ const updateGameParticipants = async (gameName) => {
 
 // Action to purchase a tournament
 export const purchaseTournament = (tournamentId) => async (dispatch, getState) => {
+  dispatch({ type: 'PURCHASE_TOURNAMENT_REQUEST' });
   try {
     const state = getState();
     const user = state.auth.user;
@@ -197,6 +206,7 @@ export const purchaseTournament = (tournamentId) => async (dispatch, getState) =
     dispatch({ type: 'PURCHASE_TOURNAMENT_SUCCESS', payload: tournamentId });
   } catch (error) {
     dispatch({ type: 'PURCHASE_TOURNAMENT_FAILURE', payload: error.message });
+    console.error('Tournament purchase failed:', error.message);
   }
 };
 

@@ -62,4 +62,5 @@ const tournamentReducer = (state = initialState, action) => {
   }
 };
 
+
 export default tournamentReducer;

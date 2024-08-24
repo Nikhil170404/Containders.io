@@ -12,7 +12,7 @@ const Profile = () => {
   const { balance } = useSelector((state) => state.wallet);
   const dispatch = useDispatch();
 
-  const [isEditing, setIsEditing] = useState(true); // Enforce editing on first login
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -20,7 +20,7 @@ const Profile = () => {
     bio: user?.bio || '',
     profileImage: user?.profileImage || '',
     gameUids: user?.gameUids || {},
-    username: user?.username || '' // Username field
+    username: user?.username || ''
   });
   const [file, setFile] = useState(null);
   const [usernameError, setUsernameError] = useState('');
@@ -66,31 +66,41 @@ const Profile = () => {
       return;
     }
 
-    // Check for unique username
-    const isUsernameAvailable = await dispatch(checkUsernameAvailability(formData.username));
-    if (!isUsernameAvailable) {
-      setUsernameError('Username is already taken');
-      return;
-    }
-
-    let profileImageUrl = formData.profileImage;
-
-    if (file) {
-      try {
-        if (profileImageUrl) {
-          const oldImageRef = ref(storage, profileImageUrl);
-          await deleteObject(oldImageRef);
+    try {
+      // Only check for username uniqueness if the username is being changed
+      if (formData.username !== user.username) {
+        const isUsernameAvailable = await dispatch(checkUsernameAvailability(formData.username));
+        if (!isUsernameAvailable) {
+          setUsernameError('Username is already taken');
+          return;
         }
-        const fileRef = ref(storage, `profile-images/${user.uid}/${file.name}`);
-        await uploadBytes(fileRef, file);
-        profileImageUrl = await getDownloadURL(fileRef);
-      } catch (error) {
-        console.error("Error handling profile image: ", error);
       }
-    }
 
-    dispatch(updateUser(user.uid, { ...formData, profileImage: profileImageUrl }));
-    setIsEditing(false);
+      let profileImageUrl = formData.profileImage;
+
+      if (file) {
+        try {
+          if (profileImageUrl) {
+            const oldImageRef = ref(storage, profileImageUrl);
+            await deleteObject(oldImageRef);
+          }
+          const fileRef = ref(storage, `profile-images/${user.uid}/${file.name}`);
+          await uploadBytes(fileRef, file);
+          profileImageUrl = await getDownloadURL(fileRef);
+        } catch (error) {
+          console.error("Error handling profile image: ", error);
+        }
+      }
+
+      if (user?.uid) {
+        dispatch(updateUser(user.uid, { ...formData, profileImage: profileImageUrl }));
+        setIsEditing(false);
+      } else {
+        console.error("User ID is missing, cannot update profile");
+      }
+    } catch (error) {
+      setUsernameError(error.message);
+    }
   };
 
   if (!user) return <p>Please log in to view your profile.</p>;
@@ -120,6 +130,7 @@ const Profile = () => {
               name="username"
               value={formData.username}
               onChange={handleChange}
+              disabled={!!user?.username} // Disable editing if username is already set
             />
             {usernameError && <p className="error-text">{usernameError}</p>}
           </div>

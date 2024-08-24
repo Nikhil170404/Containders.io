@@ -16,18 +16,25 @@ const Login = () => {
   const navigate = useNavigate();
   const { user, error } = useSelector((state) => state.auth);
 
+  useEffect(() => {
+    if (user) {
+      setMessage('Login successful!');
+      navigate(user.isAdmin ? '/admin' : '/');
+    } else if (error) {
+      setMessage(error);
+    }
+    setLoading(false);
+  }, [user, error, navigate]);
+
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
       setLoading(true);
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      
-      // If necessary, fetch additional details like age after sign-in
-      // Assuming `fetchAdditionalUserDetails` is a function that prompts for more details
-      // const additionalDetails = await fetchAdditionalUserDetails(user);
 
-      dispatch(login(user.email, user.displayName));
+      // Dispatching login with email and empty password for Google auth
+      dispatch(login(user.email, ''));
       setMessage('Login successful!');
     } catch (error) {
       console.error("Google sign-in error: ", error);
@@ -42,16 +49,6 @@ const Login = () => {
     setLoading(true);
     dispatch(login(email, password));
   };
-
-  useEffect(() => {
-    if (user) {
-      setMessage('Login successful!');
-      navigate(user.isAdmin ? '/admin' : '/');
-    } else if (error) {
-      setMessage(error);
-    }
-    setLoading(false);
-  }, [user, error, navigate]);
 
   return (
     <div className="auth-container">

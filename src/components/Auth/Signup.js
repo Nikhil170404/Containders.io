@@ -24,9 +24,8 @@ const Signup = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
-      // If necessary, prompt for additional details like age
-      const additionalDetails = { age }; // or fetch through a prompt
-      dispatch(signup({ email: user.email, name: user.displayName, ...additionalDetails }));
+      const additionalDetails = { name: user.displayName, age }; // Add more details if needed
+      dispatch(signup({ email: user.email, password: '', name: user.displayName, ...additionalDetails }));
       setMessage('Signup successful!');
     } catch (error) {
       console.error("Google sign-in error: ", error);

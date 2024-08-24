@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchTournaments } from '../../redux/actions/tournamentActions'; 
-import { purchaseTournament } from '../../redux/actions/authAction'; 
+import { fetchTournaments } from '../../redux/actions/tournamentActions';
+import { purchaseTournament } from '../../redux/actions/authAction';
 import TournamentCard from './TournamentCard';
 import Loader from '../Loader/Loader';
 import './Home.css';
 import { FaSearch, FaSort, FaTrashAlt } from 'react-icons/fa';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { firestore } from '../../firebase'; 
+import { firestore } from '../../firebase';
 
 const Home = () => {
   const dispatch = useDispatch();
-  const { isLoading } = useSelector((state) => state.tournament); 
-  const { purchasedTournaments = [] } = useSelector((state) => state.auth) || {}; 
+  const { isLoading } = useSelector((state) => state.tournament);
+  const { purchasedTournaments = [] } = useSelector((state) => state.auth) || {};
 
   const [sortOption, setSortOption] = useState('title');
   const [filterText, setFilterText] = useState('');
@@ -39,7 +39,7 @@ const Home = () => {
   }, [dispatch]);
 
   const handlePurchase = (tournamentName) => {
-    dispatch(purchaseTournament(tournamentName)); 
+    dispatch(purchaseTournament(tournamentName));
   };
 
   const handleFavorite = (tournamentName) => {
@@ -139,61 +139,38 @@ const Home = () => {
               {sortedTournaments.slice(0, 3).map((tournament) => (
                 <TournamentCard
                   key={tournament.id}
-                  id={tournament.id}
-                  title={tournament.title}
-                  description={tournament.description}
-                  tournamentName={tournament.tournamentName}
-                  participants={tournament.participants}
-                  entryFee={parseFloat(tournament.entryFee) || 0}
-                  prizeMoney={parseFloat(tournament.prizeMoney) || 0}
+                  {...tournament}
                   onPurchase={handlePurchase}
                   onFavorite={handleFavorite}
-                  isFavorite={favorites.includes(tournament.tournamentName || '')}
-                  isPurchased={purchasedTournaments.includes(tournament.tournamentName || '')}
-                  imageUrl={tournament.imageUrl}
+                  isFavorite={favorites.includes(tournament.tournamentName)}
+                  isPurchased={purchasedTournaments.includes(tournament.tournamentName)}
                 />
               ))}
             </div>
           </section>
-          <section className="all-tournaments">
-            <h2>All Tournaments:</h2>
-            <div className="tournament-list">
-              {currentTournaments.length ? (
-                currentTournaments.map((tournament) => (
-                  <TournamentCard
-                    key={tournament.id}
-                    id={tournament.id}
-                    title={tournament.title}
-                    description={tournament.description}
-                    tournamentName={tournament.tournamentName}
-                    participants={tournament.participants}
-                    entryFee={parseFloat(tournament.entryFee) || 0}
-                    prizeMoney={parseFloat(tournament.prizeMoney) || 0}
-                    onPurchase={handlePurchase}
-                    onFavorite={handleFavorite}
-                    isFavorite={favorites.includes(tournament.tournamentName || '')}
-                    isPurchased={purchasedTournaments.includes(tournament.tournamentName || '')}
-                    imageUrl={tournament.imageUrl}
-                  />
-                ))
-              ) : (
-                <p>No tournaments found.</p>
-              )}
-            </div>
+          <section className="tournament-list">
+            {currentTournaments.map((tournament) => (
+              <TournamentCard
+                key={tournament.id}
+                {...tournament}
+                onPurchase={handlePurchase}
+                onFavorite={handleFavorite}
+                isFavorite={favorites.includes(tournament.tournamentName)}
+                isPurchased={purchasedTournaments.includes(tournament.tournamentName)}
+              />
+            ))}
           </section>
-          <section className="pagination-section">
-            <div className="pagination">
-              {Array.from({ length: totalPages }, (_, index) => (
-                <button
-                  key={index}
-                  onClick={() => handlePageChange(index + 1)}
-                  className={currentPage === index + 1 ? 'active' : ''}
-                >
-                  {index + 1}
-                </button>
-              ))}
-            </div>
-          </section>
+          <div className="pagination">
+            {[...Array(totalPages).keys()].map((number) => (
+              <button
+                key={number}
+                onClick={() => handlePageChange(number + 1)}
+                className={`page-btn ${currentPage === number + 1 ? 'active' : ''}`}
+              >
+                {number + 1}
+              </button>
+            ))}
+          </div>
         </>
       )}
     </div>
