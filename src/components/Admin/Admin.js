@@ -1,33 +1,91 @@
 import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchTournaments } from '../../redux/actions/tournamentActions';
 import { collection, getDocs, onSnapshot, setDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { firestore, storage } from '../../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Modal from 'react-modal';
+import { v4 as uuidv4 } from 'uuid';
 import './Admin.css';
 
 Modal.setAppElement('#root');
 
-// Tournament Form Component
 const TournamentForm = ({ formData, handleChange, handleSubmit, formError, closeModal }) => (
   <div className="admin-form">
-    {Object.values(formError).map((err, index) => (
-      <p key={index} className="form-error">{err}</p>
-    ))}
-    {['title', 'tournamentName', 'description', 'participants', 'prizePool', 'roomId', 'roomPassword'].map((field, index) => (
-      <div className="form-group" key={index}>
-        <label>{field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</label>
-        <input 
-          type={field.includes('Fee') || field.includes('Pool') || field.includes('Participants') ? 'number' : 'text'}
-          name={field}
-          placeholder={field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-          value={formData[field]} 
-          onChange={handleChange} 
-          disabled={field === 'entryFee' && !formData.isPaid}
-        />
+    {Object.values(formError).length > 0 && (
+      <div className="form-errors">
+        {Object.values(formError).map((err, index) => (
+          <p key={index} className="form-error">{err}</p>
+        ))}
       </div>
-    ))}
+    )}
+    <div className="form-group">
+      <label>Title</label>
+      <input 
+        type="text"
+        name="title"
+        value={formData.title}
+        onChange={handleChange}
+        placeholder="Enter title"
+      />
+    </div>
+    <div className="form-group">
+      <label>Tournament Name</label>
+      <input 
+        type="text"
+        name="tournamentName"
+        value={formData.tournamentName}
+        onChange={handleChange}
+        placeholder="Enter tournament name"
+      />
+    </div>
+    <div className="form-group">
+      <label>Description</label>
+      <textarea 
+        name="description"
+        value={formData.description}
+        onChange={handleChange}
+        placeholder="Enter description"
+      />
+    </div>
+    <div className="form-group">
+      <label>Participants</label>
+      <input 
+        type="number"
+        name="participants"
+        value={formData.participants}
+        onChange={handleChange}
+        placeholder="Number of participants"
+      />
+    </div>
+    <div className="form-group">
+      <label>Prize Pool</label>
+      <input 
+        type="number"
+        name="prizePool"
+        value={formData.prizePool}
+        onChange={handleChange}
+        placeholder="Prize pool amount"
+      />
+    </div>
+    <div className="form-group">
+      <label>Room ID</label>
+      <input 
+        type="text"
+        name="roomId"
+        value={formData.roomId}
+        onChange={handleChange}
+        placeholder="Room ID"
+      />
+    </div>
+    <div className="form-group">
+      <label>Room Password</label>
+      <input 
+        type="password"
+        name="roomPassword"
+        value={formData.roomPassword}
+        onChange={handleChange}
+        placeholder="Room Password"
+      />
+    </div>
     <div className="form-group">
       <label>Map Name</label>
       <select name="mapName" value={formData.mapName} onChange={handleChange}>
@@ -49,13 +107,13 @@ const TournamentForm = ({ formData, handleChange, handleSubmit, formError, close
     <div className="form-group">
       <label>Entry Fee</label>
       <select name="isPaid" value={formData.isPaid} onChange={handleChange}>
-        <option value={true}>Paid</option>
         <option value={false}>Free</option>
+        <option value={true}>Paid</option>
       </select>
     </div>
     {formData.isPaid && (
       <div className="form-group">
-        <label>Entry Fee</label>
+        <label>Entry Fee Amount</label>
         <input 
           type="number"
           name="entryFee"
@@ -67,7 +125,12 @@ const TournamentForm = ({ formData, handleChange, handleSubmit, formError, close
     )}
     <div className="form-group">
       <label>Image</label>
-      <input type="file" name="image" onChange={handleChange} />
+      <input 
+        type="file"
+        name="image"
+        accept="image/*"
+        onChange={handleChange}
+      />
     </div>
     <div className="form-actions">
       <button className="btn btn-primary" onClick={handleSubmit}>
@@ -78,10 +141,9 @@ const TournamentForm = ({ formData, handleChange, handleSubmit, formError, close
   </div>
 );
 
-// Tournament List Component
-const TournamentList = ({ tournaments, handleEdit, handleDelete, openParticipantsModal }) => (
+const TournamentList = ({ tournaments, handleEdit, handleDelete, openParticipantsModal, handleDuplicate }) => (
   <div className="tournament-list">
-    {tournaments && tournaments.length > 0 ? (
+    {tournaments.length > 0 ? (
       tournaments.map((tournament) => (
         <div key={tournament.id} className="tournament-item">
           <div className="tournament-header">
@@ -89,231 +151,230 @@ const TournamentList = ({ tournaments, handleEdit, handleDelete, openParticipant
             {tournament.imageUrl && <img src={tournament.imageUrl} alt={tournament.title} className="tournament-image" />}
           </div>
           <p>{tournament.description}</p>
-          <p>Entry Fee: {tournament.isPaid ? tournament.entryFee : 'Free'}</p>
+          <p>Entry Fee: {tournament.isPaid ? `$${tournament.entryFee}` : 'Free'}</p>
           <p>Participants: {tournament.participants}</p>
-          <p>Prize Pool: {tournament.prizePool}</p>
+          <p>Prize Pool: ${tournament.prizePool}</p>
           <p>Map: {tournament.mapName}</p>
           <p>Type: {tournament.tournamentType}</p>
           <div className="tournament-actions">
             <button className="btn btn-edit" onClick={() => handleEdit(tournament)}>Edit</button>
             <button className="btn btn-delete" onClick={() => handleDelete(tournament.id)}>Delete</button>
-            <button className="btn btn-primary" onClick={() => openParticipantsModal(tournament.id)}>View Participants</button>
+            <button className="btn btn-duplicate" onClick={() => handleDuplicate(tournament)}>Duplicate</button>
+            <button className="btn btn-participants" onClick={() => openParticipantsModal(tournament)}>View Participants</button>
           </div>
         </div>
       ))
     ) : (
-      <p>No tournaments available</p>
+      <p>No tournaments available.</p>
     )}
   </div>
 );
 
-// Participants Modal Component
-const ParticipantsModal = ({ participants, closeModal }) => (
-  <div className="participants-modal">
-    <h3>Participants</h3>
-    {participants && participants.length > 0 ? (
-      <table className="participants-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Score</th>
-          </tr>
-        </thead>
-        <tbody>
-          {participants.map((participant, index) => (
-            <tr key={index}>
-              <td>{participant.name}</td>
-              <td>{participant.email}</td>
-              <td>{participant.score}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    ) : (
-      <p>No participants available</p>
-    )}
-    <button className="btn btn-close" onClick={closeModal}>Close</button>
-  </div>
-);
-
-// Admin Panel Component
 const AdminPanel = () => {
-  const dispatch = useDispatch();
-  const { tournaments } = useSelector((state) => state.tournament);
-
+  const [tournaments, setTournaments] = useState([]);
   const [formData, setFormData] = useState({
+    currentTournamentId: '',
     title: '',
     tournamentName: '',
     description: '',
-    entryFee: 0,
-    participants: 0,
-    prizePool: 0,
-    image: null,
-    isPaid: true,
+    participants: '',
+    prizePool: '',
     roomId: '',
     roomPassword: '',
     mapName: '',
     tournamentType: '',
-    currentTournamentId: null,
+    isPaid: false,
+    entryFee: '',
+    image: null,
+    imageUrl: '',
   });
-
-  const [participantsData, setParticipantsData] = useState({});
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-  const [participantsModalIsOpen, setParticipantsModalIsOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [formError, setFormError] = useState({});
+  const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
+  const [selectedTournament, setSelectedTournament] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(firestore, 'tournaments'), (snapshot) => {
-      const tournamentsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      dispatch(fetchTournaments(tournamentsList));
+      const tournamentData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setTournaments(tournamentData);
     });
 
     return () => unsubscribe();
-  }, [dispatch]);
+  }, []);
 
-  useEffect(() => {
-    const fetchParticipantsData = async () => {
-      const newParticipantsData = {};
-      for (const tournament of tournaments) {
-        try {
-          const participantsRef = collection(firestore, 'tournaments', tournament.id, 'participants');
-          const participantsSnapshot = await getDocs(participantsRef);
-          newParticipantsData[tournament.id] = participantsSnapshot.docs.map(doc => doc.data());
-        } catch (error) {
-          console.error('Error fetching participants:', error);
-        }
+  const validateForm = () => {
+    const errors = {};
+
+    if (!formData.title) errors.title = "Title is required.";
+    if (!formData.tournamentName) errors.tournamentName = "Tournament name is required.";
+    if (!formData.description) errors.description = "Description is required.";
+    if (!formData.participants) errors.participants = "Number of participants is required.";
+    if (!formData.prizePool) errors.prizePool = "Prize pool is required.";
+    if (formData.isPaid && !formData.entryFee) errors.entryFee = "Entry fee is required for paid tournaments.";
+    if (!formData.roomId) errors.roomId = "Room ID is required.";
+    if (!formData.roomPassword) errors.roomPassword = "Room password is required.";
+
+    setFormError(errors);
+
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleAddOrUpdateTournament = async () => {
+    if (!validateForm()) return;
+
+    const tournamentData = { ...formData };
+    delete tournamentData.image; // Remove image from the data object before saving to Firestore
+
+    try {
+      if (formData.image) {
+        // Upload image and get URL
+        const imageRef = ref(storage, `tournament_images/${uuidv4()}`);
+        await uploadBytes(imageRef, formData.image);
+        const imageUrl = await getDownloadURL(imageRef);
+        tournamentData.imageUrl = imageUrl;
       }
-      setParticipantsData(newParticipantsData);
-    };
 
-    if (tournaments.length > 0) {
-      fetchParticipantsData();
+      if (formData.currentTournamentId) {
+        // Update existing tournament
+        await updateDoc(doc(firestore, 'tournaments', formData.currentTournamentId), tournamentData);
+      } else {
+        // Add new tournament
+        await setDoc(doc(firestore, 'tournaments', uuidv4()), tournamentData);
+      }
+
+      setSuccessMessage('Tournament saved successfully!');
+      setIsModalOpen(false);
+      setFormData({
+        currentTournamentId: '',
+        title: '',
+        tournamentName: '',
+        description: '',
+        participants: '',
+        prizePool: '',
+        roomId: '',
+        roomPassword: '',
+        mapName: '',
+        tournamentType: '',
+        isPaid: false,
+        entryFee: '',
+        image: null,
+        imageUrl: '',
+      });
+    } catch (error) {
+      console.error("Error saving tournament: ", error);
     }
-  }, [tournaments]);
+  };
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     setFormData(prevState => ({
       ...prevState,
-      [name]: name === 'isPaid' ? value === 'true' : files ? files[0] : value,
-      entryFee: name === 'isPaid' && value === 'false' ? 0 : prevState.entryFee
+      [name]: name === 'image' ? files[0] : value
     }));
-  };
-
-  const handleSubmit = async () => {
-    setFormError({});
-
-    if (!formData.title || !formData.tournamentName || !formData.description) {
-      setFormError(prev => ({ ...prev, validationError: 'Please fill in all required fields.' }));
-      return;
-    }
-    if (formData.isPaid && formData.entryFee <= 0) {
-      setFormError(prev => ({ ...prev, entryFeeError: 'Entry fee must be greater than 0.' }));
-      return;
-    }
-
-    try {
-      let imageUrl = '';
-      if (formData.image) {
-        const imageRef = ref(storage, `tournament_images/${formData.image.name}`);
-        await uploadBytes(imageRef, formData.image);
-        imageUrl = await getDownloadURL(imageRef);
-      }
-
-      const tournamentData = {
-        title: formData.title,
-        tournamentName: formData.tournamentName,
-        description: formData.description,
-        entryFee: formData.entryFee,
-        participants: formData.participants,
-        prizePool: formData.prizePool,
-        roomId: formData.roomId,
-        roomPassword: formData.roomPassword,
-        mapName: formData.mapName,
-        tournamentType: formData.tournamentType,
-        isPaid: formData.isPaid,
-        imageUrl, // Save the image URL in Firestore
-      };
-
-      if (formData.currentTournamentId) {
-        await updateDoc(doc(firestore, 'tournaments', formData.currentTournamentId), tournamentData);
-      } else {
-        const newTournamentId = Date.now().toString();
-        await setDoc(doc(firestore, 'tournaments', newTournamentId), tournamentData);
-      }
-
-      closeModal();
-    } catch (error) {
-      console.error('Error saving tournament:', error);
-    }
   };
 
   const handleEdit = (tournament) => {
     setFormData({
       ...tournament,
       currentTournamentId: tournament.id,
-      image: null // Reset image to avoid re-uploading the existing image
+      image: null // Reset image field on edit
     });
-    setModalIsOpen(true);
+    setIsModalOpen(true);
   };
 
-  const handleDelete = async (tournamentId) => {
+  const handleDelete = async (id) => {
     try {
-      await deleteDoc(doc(firestore, 'tournaments', tournamentId));
+      await deleteDoc(doc(firestore, 'tournaments', id));
+      setSuccessMessage('Tournament deleted successfully!');
     } catch (error) {
-      console.error('Error deleting tournament:', error);
+      console.error("Error deleting tournament: ", error);
     }
   };
 
-  const openParticipantsModal = (tournamentId) => {
-    setParticipantsData(participantsData[tournamentId] || []);
-    setParticipantsModalIsOpen(true);
+  const handleDuplicate = async (tournament) => {
+    try {
+      const newTournamentData = { ...tournament, title: `${tournament.title} (Copy)`, currentTournamentId: '' };
+      delete newTournamentData.id;
+      await setDoc(doc(firestore, 'tournaments', uuidv4()), newTournamentData);
+      setSuccessMessage('Tournament duplicated successfully!');
+    } catch (error) {
+      console.error("Error duplicating tournament: ", error);
+    }
+  };
+
+  const openParticipantsModal = (tournament) => {
+    setSelectedTournament(tournament);
+    setIsParticipantsModalOpen(true);
   };
 
   const closeModal = () => {
-    setModalIsOpen(false);
+    setIsModalOpen(false);
     setFormData({
+      currentTournamentId: '',
       title: '',
       tournamentName: '',
       description: '',
-      entryFee: 0,
-      participants: 0,
-      prizePool: 0,
-      image: null,
-      isPaid: true,
+      participants: '',
+      prizePool: '',
       roomId: '',
       roomPassword: '',
       mapName: '',
       tournamentType: '',
-      currentTournamentId: null,
+      isPaid: false,
+      entryFee: '',
+      image: null,
+      imageUrl: '',
     });
+    setFormError({});
+  };
+
+  const closeParticipantsModal = () => {
+    setIsParticipantsModalOpen(false);
+    setSelectedTournament(null);
   };
 
   return (
     <div className="admin-panel">
-      <h2>Admin Panel</h2>
-      <button className="btn btn-primary" onClick={() => setModalIsOpen(true)}>Add Tournament</button>
-
-      <TournamentList 
-        tournaments={tournaments} 
-        handleEdit={handleEdit} 
-        handleDelete={handleDelete} 
+      <button className="btn btn-add" onClick={() => setIsModalOpen(true)}>Add Tournament</button>
+      {successMessage && <div className="success-message">{successMessage}</div>}
+      <TournamentList
+        tournaments={tournaments}
+        handleEdit={handleEdit}
+        handleDelete={handleDelete}
+        handleDuplicate={handleDuplicate}
         openParticipantsModal={openParticipantsModal}
       />
-
-      <Modal isOpen={modalIsOpen} onRequestClose={closeModal} contentLabel="Tournament Modal">
-        <TournamentForm 
-          formData={formData} 
-          handleChange={handleChange} 
-          handleSubmit={handleSubmit} 
-          formError={formError} 
-          closeModal={closeModal} 
+      <Modal
+        isOpen={isModalOpen}
+        onRequestClose={closeModal}
+        contentLabel="Tournament Form"
+        className="modal"
+        overlayClassName="overlay"
+      >
+        <TournamentForm
+          formData={formData}
+          handleChange={handleChange}
+          handleSubmit={handleAddOrUpdateTournament}
+          formError={formError}
+          closeModal={closeModal}
         />
       </Modal>
-
-      <Modal isOpen={participantsModalIsOpen} onRequestClose={() => setParticipantsModalIsOpen(false)} contentLabel="Participants Modal">
-        <ParticipantsModal participants={participantsData} closeModal={() => setParticipantsModalIsOpen(false)} />
+      <Modal
+        isOpen={isParticipantsModalOpen}
+        onRequestClose={closeParticipantsModal}
+        contentLabel="Participants"
+        className="modal"
+        overlayClassName="overlay"
+      >
+        <div className="participants-modal">
+          <h2>Participants for {selectedTournament?.title}</h2>
+          {/* Add logic to list participants */}
+          <button className="btn btn-close" onClick={closeParticipantsModal}>Close</button>
+        </div>
       </Modal>
     </div>
   );

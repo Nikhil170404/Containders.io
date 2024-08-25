@@ -1,293 +1,135 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import PropTypes from 'prop-types';
-import { useDispatch, useSelector } from 'react-redux';
-import { joinTournament } from '../../redux/actions/tournamentActions';
-import { fetchWallet, updateWallet } from '../../redux/actions/walletAction';
-import { firestore } from '../../firebase';
-import { doc, onSnapshot, updateDoc, arrayUnion, increment } from 'firebase/firestore';
-import './TournamentCard.css';
+import React, { useEffect, useState } from 'react';
+import { Card, Image, Icon, Loader, Button } from 'semantic-ui-react';
+import { FaTrophy, FaUserFriends, FaMapMarkedAlt, FaLock } from 'react-icons/fa';
+import { getFirestore, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
-const TournamentCard = ({
-  id,
-  title,
-  description,
-  entryFee,
-  prizePool,
-  mapName,
-  participants,
-  imageUrl,
-  roomId,
-  roomPassword,
-  tournamentType,
-  isJoined = false,
-  username,
-  userId
-}) => {
-  const [state, setState] = useState({
-    showDetails: false,
-    showCredentials: false,
-    full: participants === 0,
-    showPaymentPrompt: false,
-    showJoinForm: false,
-    gameUid: '',
-    gameUsername: '',
-    mapDownloaded: false,
-    confirmationMessage: ''
-  });
+const TournamentCard = ({ tournamentId }) => {
+  const [tournament, setTournament] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasJoined, setHasJoined] = useState(false);
+  const [error, setError] = useState(null);
 
-  const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
-  const { balance } = useSelector((state) => state.wallet);
-
-  const fetchTournamentData = useCallback(() => {
-    const tournamentRef = doc(firestore, 'tournaments', id);
-
-    const unsubscribe = onSnapshot(tournamentRef, (docSnapshot) => {
-      const tournamentData = docSnapshot.data();
-      if (tournamentData) {
-        setState((prevState) => ({
-          ...prevState,
-          participants: tournamentData.participants,
-          full: tournamentData.participants === 0 || (tournamentData.participants !== -1 && tournamentData.participants <= 0),
-          showCredentials: isJoined && tournamentData.roomId && tournamentData.roomPassword
-        }));
-      } else {
-        console.error("No such tournament!");
-      }
-    });
-
-    return unsubscribe;
-  }, [id, isJoined]);
+  const db = getFirestore();
+  const auth = getAuth();
+  const navigate = useNavigate();
+  const currentUser = auth.currentUser;
 
   useEffect(() => {
-    const unsubscribe = fetchTournamentData();
-    return () => unsubscribe();
-  }, [fetchTournamentData]);
-
-  useEffect(() => {
-    if (user) {
-      dispatch(fetchWallet());
-    }
-  }, [dispatch, user]);
-
-  const handlePayment = useCallback(async () => {
-    if (user && balance !== undefined) {
-      if (balance < entryFee) {
-        console.warn("Insufficient funds. Please add funds to your wallet.");
-        setState((prevState) => ({ ...prevState, showPaymentPrompt: true }));
-        return false;
+    const fetchTournament = async () => {
+      if (!tournamentId) {
+        setError("Tournament ID is missing.");
+        setIsLoading(false);
+        return;
       }
-      return true;
-    } else {
-      console.error("Error fetching wallet or user data.");
-      setState((prevState) => ({ ...prevState, showPaymentPrompt: true }));
-      return false;
-    }
-  }, [user, balance, entryFee]);
 
-  const updateWalletBalance = useCallback(async (amount) => {
-    if (user) {
-      const userWalletRef = doc(firestore, 'users', user.uid);
-      await updateDoc(userWalletRef, {
-        balance: increment(-amount)
-      });
+      if (!currentUser) {
+        setError("User not authenticated. Please log in.");
+        setIsLoading(false);
+        navigate('/login'); // Redirect to login if not authenticated
+        return;
+      }
 
-      dispatch(updateWallet(balance - amount));
-    }
-  }, [user, balance, dispatch]);
+      try {
+        const docRef = doc(db, 'tournaments', tournamentId);
+        const docSnap = await getDoc(docRef);
 
-  const handleJoin = useCallback(async () => {
-    if (!user) {
-      console.error("User is not logged in");
-      return;
-    }
+        if (docSnap.exists()) {
+          const tournamentData = docSnap.data();
+          setTournament(tournamentData);
 
-    if (state.full) {
-      console.warn("Tournament is full");
-      return;
-    }
+          // Check if the current user has joined this tournament
+          if (tournamentData.participants && tournamentData.participants.includes(currentUser.uid)) {
+            setHasJoined(true);
+          }
+        } else {
+          setError("No such tournament exists.");
+        }
+      } catch (error) {
+        console.error("Error loading tournament data:", error);
+        setError("Failed to load tournament data.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    const paymentSuccess = await handlePayment();
-    if (!paymentSuccess) return;
+    fetchTournament();
+  }, [tournamentId, db, currentUser, navigate]);
 
-    setState((prevState) => ({
-      ...prevState,
-      showJoinForm: true
-    }));
-  }, [user, state.full, handlePayment]);
-
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-
+  const handleJoinTournament = async () => {
     try {
-      await updateWalletBalance(entryFee);
-
-      const tournamentRef = doc(firestore, 'tournaments', id);
-      const updateData = {
-        participantsData: arrayUnion({
-          userId: user.uid,
-          username: state.gameUsername,
-          tournamentUid: state.gameUid,
-          mapDownloaded: state.mapDownloaded
-        })
-      };
-
-      if (tournamentType !== 'unlimited') {
-        updateData.participants = increment(-1); // Decrease the participant count by 1 for limited tournaments
+      if (!hasJoined && currentUser) {
+        const tournamentRef = doc(db, 'tournaments', tournamentId);
+        await updateDoc(tournamentRef, {
+          participants: arrayUnion(currentUser.uid)
+        });
+        setHasJoined(true);
       }
-
-      await updateDoc(tournamentRef, updateData);
-
-      const userTournamentsRef = doc(firestore, 'users', user.uid);
-      await updateDoc(userTournamentsRef, {
-        joinedTournaments: arrayUnion(id),
-        joinHistory: arrayUnion({
-          tournamentId: id,
-          tournamentName: title,
-          entryFee,
-          joinDate: new Date()
-        })
-      });
-
-      // Dispatch action to update the local Redux state
-      dispatch(joinTournament(title));
-
-      // Show the credentials after successful join
-      setState((prevState) => ({
-        ...prevState,
-        showDetails: true,
-        showCredentials: true,
-        confirmationMessage: `Successfully joined the tournament. ₹${entryFee} has been deducted from your wallet.`,
-        showJoinForm: false
-      }));
-
-      fetchTournamentData();
     } catch (error) {
-      console.error("Error joining tournament: ", error);
+      console.error("Error joining tournament:", error);
+      setError("Failed to join the tournament.");
     }
   };
 
-  const joinButtonText = useMemo(() => {
-    if (state.full) {
-      return 'Full';
-    }
-    return isJoined ? (state.showCredentials ? 'Hide Credentials' : 'Show Credentials') : `Join ₹${entryFee}`;
-  }, [state.full, isJoined, state.showCredentials, entryFee]);
+  if (isLoading) {
+    return <Loader active inline="centered" />;
+  }
 
-  const joinButtonClass = useMemo(() => {
-    if (state.full) {
-      return 'join-button full';
-    }
-    return isJoined ? 'join-button joined' : 'join-button';
-  }, [state.full, isJoined]);
+  if (error) {
+    return <div>{error}</div>;
+  }
 
-  const handleButtonClick = () => {
-    if (isJoined) {
-      setState((prevState) => ({ ...prevState, showCredentials: !prevState.showCredentials }));
-    } else {
-      handleJoin();
-    }
-  };
+  if (!tournament) {
+    return <div>Error loading tournament data.</div>;
+  }
+
+  const {
+    title,
+    tournamentName,
+    description,
+    entryFee,
+    prizePool,
+    imageUrl,
+    isPaid,
+    mapName,
+    participants,
+    roomId,
+    roomPassword,
+    tournamentType,
+  } = tournament;
 
   return (
-    <div className="tournament-card">
-      <div className="tournament-card-header">
-        <img src={imageUrl || 'default-image-url.png'} alt={title} className="tournament-card-image" />
-        <h3 className="tournament-card-title">{title}</h3>
-      </div>
-      <div className="tournament-card-content">
-        <p className="tournament-card-description">{description}</p>
-        <div className="tournament-info">
-          <p>Prize Pool: ₹{prizePool}</p>
-          <p>Entry Fee: ₹{entryFee}</p>
-          <p>Map Name: {mapName}</p>
-          <p>Tournament Type: {tournamentType}</p>
-          <p>Participants: {participants === -1 ? 'Unlimited' : participants}</p>
-        </div>
-        <div className="tournament-actions">
-          <button
-            className={joinButtonClass}
-            onClick={handleButtonClick}
-            disabled={state.full || (isJoined && state.showCredentials)}
-          >
-            {joinButtonText}
-          </button>
-        </div>
-        {state.showJoinForm && (
-          <form className="join-form" onSubmit={handleFormSubmit}>
-            <div className="form-group">
-              <label htmlFor="gameUid">Game UID:</label>
-              <input
-                type="text"
-                id="gameUid"
-                value={state.gameUid}
-                onChange={(e) => setState((prevState) => ({ ...prevState, gameUid: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="gameUsername">Game Username:</label>
-              <input
-                type="text"
-                id="gameUsername"
-                value={state.gameUsername}
-                onChange={(e) => setState((prevState) => ({ ...prevState, gameUsername: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={state.mapDownloaded}
-                  onChange={(e) => setState((prevState) => ({ ...prevState, mapDownloaded: e.target.checked }))}
-                />
-                I have downloaded the map.
-              </label>
-            </div>
-            {!state.mapDownloaded && (
-              <p>Please download the map to participate in the tournament.</p>
-            )}
-            <button type="submit" className="submit-button">Submit</button>
-          </form>
-        )}
-        {state.showDetails && (
-          <div className="tournament-details">
-            <h4>Details:</h4>
-            <p><strong>Room ID:</strong> {roomId}</p>
-            <p><strong>Room Password:</strong> {roomPassword}</p>
+    <Card fluid>
+      <Image src={imageUrl} wrapped ui={false} alt={`${title} Tournament`} />
+      <Card.Content>
+        <Card.Header>{title} <FaTrophy style={{ color: 'gold' }} /></Card.Header>
+        <Card.Meta>{tournamentName} • {tournamentType} 🕹️</Card.Meta>
+        <Card.Description>{description || "Join the battle for glory!"}</Card.Description>
+        <Card.Description>
+          <Icon name="money bill alternate outline" /> Entry Fee: {isPaid ? `$${entryFee}` : 'Free'}
+        </Card.Description>
+        <Card.Description>
+          <FaTrophy /> Prize Pool: ${prizePool}
+        </Card.Description>
+        <Card.Description>
+          <FaMapMarkedAlt /> Map: {mapName}
+        </Card.Description>
+        <Card.Description>
+          <FaUserFriends /> Participants: {participants}
+        </Card.Description>
+      </Card.Content>
+      <Card.Content extra>
+        {hasJoined ? (
+          <div>
+            <FaLock /> Room ID: {roomId} | Password: {roomPassword}
           </div>
+        ) : (
+          <Button primary onClick={handleJoinTournament}>Join Tournament</Button>
         )}
-        {state.showPaymentPrompt && (
-          <div className="payment-prompt">
-            <p>Your balance is insufficient to join this tournament. Please add funds to your wallet.</p>
-          </div>
-        )}
-        {state.confirmationMessage && (
-          <div className="confirmation-message">
-            <p>{state.confirmationMessage}</p>
-          </div>
-        )}
-      </div>
-    </div>
+      </Card.Content>
+    </Card>
   );
-};
-
-TournamentCard.propTypes = {
-  id: PropTypes.string.isRequired,
-  title: PropTypes.string.isRequired,
-  description: PropTypes.string.isRequired,
-  entryFee: PropTypes.number.isRequired,
-  prizePool: PropTypes.number.isRequired,
-  mapName: PropTypes.string.isRequired,
-  participants: PropTypes.number.isRequired,
-  imageUrl: PropTypes.string,
-  roomId: PropTypes.string,
-  roomPassword: PropTypes.string,
-  tournamentType: PropTypes.string.isRequired,
-  isJoined: PropTypes.bool,
-  username: PropTypes.string.isRequired,
-  userId: PropTypes.string.isRequired
 };
 
 export default TournamentCard;
