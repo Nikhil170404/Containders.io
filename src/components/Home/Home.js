@@ -87,10 +87,17 @@ const Home = () => {
   const sortedTournaments = sortTournaments(realTimeTournaments || [], sortOption);
   const filteredTournaments = filterTournaments(sortedTournaments || [], filterText, filterType);
 
+  // Remove duplicate tournaments
+  const uniqueTournaments = Array.from(new Set(filteredTournaments.map(t => t.id)))
+    .map(id => {
+      return filteredTournaments.find(tournament => tournament.id === id);
+    });
+
   // Pagination logic
   const indexOfLastTournament = currentPage * tournamentsPerPage;
   const indexOfFirstTournament = indexOfLastTournament - tournamentsPerPage;
-  const totalPages = Math.ceil(filteredTournaments.length / tournamentsPerPage);
+  const currentTournaments = uniqueTournaments.slice(indexOfFirstTournament, indexOfLastTournament);
+  const totalPages = Math.ceil(uniqueTournaments.length / tournamentsPerPage);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -103,8 +110,8 @@ const Home = () => {
       ) : (
         <>
           <header className="home-header">
-            <h1>Welcome to the Esports Platform</h1>
-            <p>Compete with other gamers and win money!</p>
+            <h1>🎮 Welcome to the Esports Platform!</h1>
+            <p>Compete in exciting tournaments and win amazing prizes! 💰</p>
           </header>
           <section className="filters-section">
             <div className="filter-group">
@@ -149,16 +156,16 @@ const Home = () => {
             </button>
           </section>
           <section className="featured-tournaments">
-            <h2>Featured Tournaments:</h2>
+            <h2>🏆 Featured Tournaments:</h2>
             <div className="tournament-list">
-              {sortedTournaments.slice(0, 3).map((tournament) => (
+              {currentTournaments.map((tournament) => (
                 <TournamentCard
                   key={tournament.id}
                   {...tournament}
                   onPurchase={handlePurchase}
                   onFavorite={handleFavorite}
-                  isFavorite={favorites.includes(tournament.tournamentName)}
-                  isPurchased={purchasedTournaments.includes(tournament.tournamentName)}
+                  isFavorite={favorites.includes(tournament.title)}
+                  isPurchased={purchasedTournaments.includes(tournament.title)}
                 />
               ))}
             </div>

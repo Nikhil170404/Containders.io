@@ -259,11 +259,11 @@ const TournamentCard = ({ onJoin }) => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setFormDialogOpen(false)} color="secondary">
+          <Button onClick={() => setFormDialogOpen(false)} color="primary">
             Cancel
           </Button>
           <Button onClick={handleSubmitForm} color="primary">
-            Join Tournament
+            Submit
           </Button>
         </DialogActions>
       </Dialog>

@@ -13,7 +13,7 @@ Modal.setAppElement('#root');
 // Tournament Form Component
 const TournamentForm = ({ formData, handleChange, handleSubmit, formError, closeModal }) => (
   <div className="admin-form">
-    {Object.values(formError).length > 0 && (
+    {Object.keys(formError).length > 0 && (
       <div className="form-errors">
         {Object.values(formError).map((err, index) => (
           <p key={index} className="form-error">{err}</p>
@@ -187,7 +187,7 @@ const TournamentList = ({ tournaments, handleEdit, handleDelete, openParticipant
           <p>{tournament.description}</p>
           <p>Entry Fee: {tournament.isPaid ? `$${tournament.entryFee}` : 'Free'}</p>
           <p>Participants: {tournament.participants}</p>
-          <p>Prize Pool: ${tournament.prizePool}</p>
+          <p>Prize Pool: ₹{tournament.prizePool}</p>
           <p>Map: {tournament.mapName}</p>
           <p>Type: {tournament.tournamentType}</p>
           <div className="tournament-actions">
@@ -246,11 +246,11 @@ const AdminPanel = () => {
     if (!formData.description) errors.description = "Description is required.";
     if (!formData.participants) errors.participants = "Number of participants is required.";
     if (!formData.prizePool) errors.prizePool = "Prize pool is required.";
-    if (formData.isPaid && !formData.entryFee) errors.entryFee = "Entry fee is required.";
     if (!formData.roomId) errors.roomId = "Room ID is required.";
-    if (!formData.roomPassword) errors.roomPassword = "Room password is required.";
+    if (!formData.roomPassword) errors.roomPassword = "Room Password is required.";
     if (!formData.mapName) errors.mapName = "Map name is required.";
     if (!formData.tournamentType) errors.tournamentType = "Tournament type is required.";
+    if (formData.isPaid && !formData.entryFee) errors.entryFee = "Entry fee is required for paid tournaments.";
 
     setFormError(errors);
     return Object.keys(errors).length === 0;
@@ -258,9 +258,8 @@ const AdminPanel = () => {
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
-
-    setFormData((prevData) => ({
-      ...prevData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: type === 'file' ? files[0] : value,
     }));
   };
@@ -269,50 +268,48 @@ const AdminPanel = () => {
     if (!validateForm()) return;
 
     try {
-      if (formData.currentTournamentId) {
-        // Update tournament
-        const tournamentRef = doc(firestore, 'tournaments', formData.currentTournamentId);
-        await updateDoc(tournamentRef, {
-          title: formData.title,
-          tournamentName: formData.tournamentName,
-          description: formData.description,
-          participants: parseInt(formData.participants, 10),
-          prizePool: parseFloat(formData.prizePool),
-          roomId: formData.roomId,
-          roomPassword: formData.roomPassword,
-          mapName: formData.mapName,
-          tournamentType: formData.tournamentType,
-          isPaid: formData.isPaid,
-          entryFee: formData.isPaid ? parseFloat(formData.entryFee) : null,
-          imageUrl: formData.imageUrl,
-        });
-        setSuccessMessage('Tournament updated successfully!');
-      } else {
-        // Add new tournament
-        let imageUrl = '';
-        if (formData.image) {
-          const imageRef = ref(storage, `tournament_images/${uuidv4()}`);
-          await uploadBytes(imageRef, formData.image);
-          imageUrl = await getDownloadURL(imageRef);
-        }
-        const newTournament = {
-          title: formData.title,
-          tournamentName: formData.tournamentName,
-          description: formData.description,
-          participants: parseInt(formData.participants, 10),
-          prizePool: parseFloat(formData.prizePool),
-          roomId: formData.roomId,
-          roomPassword: formData.roomPassword,
-          mapName: formData.mapName,
-          tournamentType: formData.tournamentType,
-          isPaid: formData.isPaid,
-          entryFee: formData.isPaid ? parseFloat(formData.entryFee) : null,
-          imageUrl,
-        };
-        await setDoc(doc(firestore, 'tournaments', uuidv4()), newTournament);
-        setSuccessMessage('Tournament added successfully!');
+      if (formData.image) {
+        const imageRef = ref(storage, `tournament-images/${uuidv4()}`);
+        await uploadBytes(imageRef, formData.image);
+        const imageUrl = await getDownloadURL(imageRef);
+        formData.imageUrl = imageUrl;
       }
 
+      if (formData.currentTournamentId) {
+        const tournamentDoc = doc(firestore, 'tournaments', formData.currentTournamentId);
+        await updateDoc(tournamentDoc, {
+          title: formData.title,
+          tournamentName: formData.tournamentName,
+          description: formData.description,
+          participants: formData.participants,
+          prizePool: formData.prizePool,
+          roomId: formData.roomId,
+          roomPassword: formData.roomPassword,
+          mapName: formData.mapName,
+          tournamentType: formData.tournamentType,
+          isPaid: formData.isPaid,
+          entryFee: formData.entryFee,
+          imageUrl: formData.imageUrl,
+        });
+      } else {
+        const newTournamentRef = doc(collection(firestore, 'tournaments'));
+        await setDoc(newTournamentRef, {
+          title: formData.title,
+          tournamentName: formData.tournamentName,
+          description: formData.description,
+          participants: formData.participants,
+          prizePool: formData.prizePool,
+          roomId: formData.roomId,
+          roomPassword: formData.roomPassword,
+          mapName: formData.mapName,
+          tournamentType: formData.tournamentType,
+          isPaid: formData.isPaid,
+          entryFee: formData.entryFee,
+          imageUrl: formData.imageUrl,
+        });
+      }
+
+      setSuccessMessage('Tournament successfully saved!');
       setFormData({
         currentTournamentId: '',
         title: '',
@@ -331,7 +328,7 @@ const AdminPanel = () => {
       });
       setIsModalOpen(false);
     } catch (error) {
-      console.error("Error saving tournament:", error);
+      console.error('Error saving tournament:', error);
     }
   };
 
@@ -349,7 +346,6 @@ const AdminPanel = () => {
       tournamentType: tournament.tournamentType,
       isPaid: tournament.isPaid,
       entryFee: tournament.entryFee,
-      image: null,
       imageUrl: tournament.imageUrl,
     });
     setIsModalOpen(true);
@@ -358,48 +354,53 @@ const AdminPanel = () => {
   const handleDelete = async (id) => {
     try {
       await deleteDoc(doc(firestore, 'tournaments', id));
-      setSuccessMessage('Tournament deleted successfully!');
+      setSuccessMessage('Tournament successfully deleted!');
     } catch (error) {
-      console.error("Error deleting tournament:", error);
+      console.error('Error deleting tournament:', error);
     }
   };
 
   const handleDuplicate = async (tournament) => {
-    const duplicatedTournament = { ...tournament, id: uuidv4() };
-    delete duplicatedTournament.id;
     try {
-      await setDoc(doc(firestore, 'tournaments', uuidv4()), duplicatedTournament);
-      setSuccessMessage('Tournament duplicated successfully!');
+      const newTournamentRef = doc(collection(firestore, 'tournaments'));
+      await setDoc(newTournamentRef, {
+        ...tournament,
+        title: `${tournament.title} - Copy`,
+        currentTournamentId: undefined,
+      });
+      setSuccessMessage('Tournament successfully duplicated!');
     } catch (error) {
-      console.error("Error duplicating tournament:", error);
+      console.error('Error duplicating tournament:', error);
     }
   };
 
   const openParticipantsModal = (tournament) => {
-    // Handle opening participants modal if necessary
+    // Open participants modal logic here
   };
 
   return (
     <div className="admin-panel">
-      <div className="header">
-        <h1>Admin Panel</h1>
-        <Button variant="contained" color="primary" onClick={() => setIsModalOpen(true)}>
-          Add Tournament
-        </Button>
-      </div>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={() => setIsModalOpen(true)}
+        startIcon={<Add />}
+      >
+        Add Tournament
+      </Button>
+      {successMessage && <div className="success-message">{successMessage}</div>}
       <TournamentList
         tournaments={tournaments}
         handleEdit={handleEdit}
         handleDelete={handleDelete}
-        handleDuplicate={handleDuplicate}
         openParticipantsModal={openParticipantsModal}
+        handleDuplicate={handleDuplicate}
       />
       <Modal
         isOpen={isModalOpen}
         onRequestClose={() => setIsModalOpen(false)}
-        contentLabel="Tournament Form"
-        className="modal"
-        overlayClassName="modal-overlay"
+        className="admin-modal"
+        overlayClassName="admin-modal-overlay"
       >
         <TournamentForm
           formData={formData}
@@ -409,7 +410,6 @@ const AdminPanel = () => {
           closeModal={() => setIsModalOpen(false)}
         />
       </Modal>
-      {successMessage && <div className="success-message">{successMessage}</div>}
     </div>
   );
 };
