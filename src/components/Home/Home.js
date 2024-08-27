@@ -19,6 +19,7 @@ const Home = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [favorites, setFavorites] = useState([]);
   const [realTimeTournaments, setRealTimeTournaments] = useState([]);
+  const [filterType, setFilterType] = useState('all');
   const tournamentsPerPage = 10;
 
   useEffect(() => {
@@ -67,27 +68,28 @@ const Home = () => {
     });
   };
 
-  const filterTournaments = (tournaments, text) => {
+  const filterTournaments = (tournaments, text, type) => {
     const lowercasedText = text.toLowerCase();
     return tournaments.filter(
       (tournament) =>
         (tournament.title && tournament.title.toLowerCase().includes(lowercasedText)) ||
-        (tournament.description && tournament.description.toLowerCase().includes(lowercasedText))
+        (tournament.description && tournament.description.toLowerCase().includes(lowercasedText)) ||
+        (type === 'all' || tournament.tournamentType === type)
     );
   };
 
   const handleClearFilters = () => {
     setFilterText('');
     setSortOption('title');
+    setFilterType('all');
   };
 
   const sortedTournaments = sortTournaments(realTimeTournaments || [], sortOption);
-  const filteredTournaments = filterTournaments(sortedTournaments || [], filterText);
+  const filteredTournaments = filterTournaments(sortedTournaments || [], filterText, filterType);
 
   // Pagination logic
   const indexOfLastTournament = currentPage * tournamentsPerPage;
   const indexOfFirstTournament = indexOfLastTournament - tournamentsPerPage;
-  const currentTournaments = filteredTournaments.slice(indexOfFirstTournament, indexOfLastTournament);
   const totalPages = Math.ceil(filteredTournaments.length / tournamentsPerPage);
 
   const handlePageChange = (pageNumber) => {
@@ -128,6 +130,19 @@ const Home = () => {
                 <option value="prizeMoney">Prize Money</option>
               </select>
             </div>
+            <div className="filter-group">
+              <label>Type:</label>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="type-select"
+              >
+                <option value="all">All</option>
+                <option value="solo">Solo</option>
+                <option value="duo">Duo</option>
+                <option value="squad">Squad</option>
+              </select>
+            </div>
             <button onClick={handleClearFilters} className="clear-filters-btn">
               <FaTrashAlt className="icon" />
               Clear Filters
@@ -147,18 +162,6 @@ const Home = () => {
                 />
               ))}
             </div>
-          </section>
-          <section className="tournament-list">
-            {currentTournaments.map((tournament) => (
-              <TournamentCard
-                key={tournament.id}
-                {...tournament}
-                onPurchase={handlePurchase}
-                onFavorite={handleFavorite}
-                isFavorite={favorites.includes(tournament.tournamentName)}
-                isPurchased={purchasedTournaments.includes(tournament.tournamentName)}
-              />
-            ))}
           </section>
           <div className="pagination">
             {[...Array(totalPages).keys()].map((number) => (

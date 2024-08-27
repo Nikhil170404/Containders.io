@@ -1,135 +1,278 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Image, Icon, Loader, Button } from 'semantic-ui-react';
-import { FaTrophy, FaUserFriends, FaMapMarkedAlt, FaLock } from 'react-icons/fa';
-import { getFirestore, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import {
+  Card, CardContent, CardMedia, Typography, Button,
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  TextField, Checkbox, FormControlLabel
+} from '@mui/material';
+import { collection, onSnapshot, doc, updateDoc, getDoc, arrayUnion } from 'firebase/firestore';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchWallet, updateWallet } from '../../redux/actions/walletAction';
+import { firestore } from '../../firebase';
+import './TournamentCard.css';
 
-const TournamentCard = ({ tournamentId }) => {
-  const [tournament, setTournament] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasJoined, setHasJoined] = useState(false);
-  const [error, setError] = useState(null);
+const TournamentCard = ({ onJoin }) => {
+  const [tournaments, setTournaments] = useState([]);
+  const [joinedTournaments, setJoinedTournaments] = useState({});
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogContent, setDialogContent] = useState({});
+  const [formDialogOpen, setFormDialogOpen] = useState(false);
+  const [gameUsername, setGameUsername] = useState('');
+  const [gameUID, setGameUID] = useState('');
+  const [mapDownloaded, setMapDownloaded] = useState(false);
+  const [currentTournament, setCurrentTournament] = useState(null);
 
-  const db = getFirestore();
-  const auth = getAuth();
-  const navigate = useNavigate();
-  const currentUser = auth.currentUser;
+  const { user } = useSelector((state) => state.auth);
+  const wallet = useSelector((state) => state.wallet);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchTournament = async () => {
-      if (!tournamentId) {
-        setError("Tournament ID is missing.");
-        setIsLoading(false);
-        return;
-      }
+    if (user) {
+      dispatch(fetchWallet());
+    }
 
-      if (!currentUser) {
-        setError("User not authenticated. Please log in.");
-        setIsLoading(false);
-        navigate('/login'); // Redirect to login if not authenticated
-        return;
-      }
+    const unsubscribe = onSnapshot(collection(firestore, 'tournaments'), (snapshot) => {
+      const tournamentsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-      try {
-        const docRef = doc(db, 'tournaments', tournamentId);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const tournamentData = docSnap.data();
-          setTournament(tournamentData);
-
-          // Check if the current user has joined this tournament
-          if (tournamentData.participants && tournamentData.participants.includes(currentUser.uid)) {
-            setHasJoined(true);
-          }
-        } else {
-          setError("No such tournament exists.");
+      // Remove duplicate tournaments by ID
+      const uniqueTournaments = tournamentsData.reduce((acc, tournament) => {
+        if (!acc.some((t) => t.id === tournament.id)) {
+          acc.push(tournament);
         }
-      } catch (error) {
-        console.error("Error loading tournament data:", error);
-        setError("Failed to load tournament data.");
-      } finally {
-        setIsLoading(false);
+        return acc;
+      }, []);
+
+      setTournaments(uniqueTournaments);
+    });
+
+    return () => unsubscribe();
+  }, [user, dispatch]);
+
+  useEffect(() => {
+    const fetchJoinedTournaments = async () => {
+      if (user) {
+        const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+        if (userDoc.exists()) {
+          setJoinedTournaments(userDoc.data().joinedTournaments || {});
+        }
       }
     };
+    fetchJoinedTournaments();
+  }, [user]);
 
-    fetchTournament();
-  }, [tournamentId, db, currentUser, navigate]);
+  const handleJoinClick = async (tournament) => {
+    if (!user) {
+      alert('Please log in to join a tournament.');
+      return;
+    }
 
-  const handleJoinTournament = async () => {
+    if (joinedTournaments[tournament.id]) {
+      showRoomDetails(tournament);
+      return;
+    }
+
+    if (tournament.isPaid && wallet.balance < tournament.entryFee) {
+      alert('Insufficient funds in your wallet.');
+      return;
+    }
+
+    setCurrentTournament(tournament);
+    setFormDialogOpen(true);
+  };
+
+  const handleSubmitForm = async () => {
+    if (!gameUsername || !gameUID || !mapDownloaded) {
+      alert('Please fill out all fields and confirm you have downloaded the map.');
+      return;
+    }
+
     try {
-      if (!hasJoined && currentUser) {
-        const tournamentRef = doc(db, 'tournaments', tournamentId);
-        await updateDoc(tournamentRef, {
-          participants: arrayUnion(currentUser.uid)
-        });
-        setHasJoined(true);
+      const tournamentRef = doc(firestore, 'tournaments', currentTournament.id);
+      const tournamentDoc = await getDoc(tournamentRef);
+
+      if (tournamentDoc.exists()) {
+        const tournamentData = tournamentDoc.data();
+
+        if (tournamentData.participants > 0) {
+          // Update participant count
+          await updateDoc(tournamentRef, {
+            participants: tournamentData.participants - 1,
+            participantsData: arrayUnion({
+              userId: user.uid,
+              gameUsername,
+              gameUID,
+              mapDownloaded,
+            }),
+          });
+
+          if (currentTournament.isPaid) {
+            // Deduct entry fee from wallet
+            const newBalance = wallet.balance - currentTournament.entryFee;
+            const walletRef = doc(firestore, 'wallets', user.uid);
+            await updateDoc(walletRef, {
+              balance: newBalance,
+              transactions: arrayUnion({
+                amount: currentTournament.entryFee,
+                type: 'debit',
+                date: new Date(),
+                details: `Entry Fee for ${currentTournament.title}`,
+              }),
+            });
+            dispatch(updateWallet(newBalance));
+          }
+
+          // Update user's joined tournaments
+          const userRef = doc(firestore, 'users', user.uid);
+          await updateDoc(userRef, {
+            joinedTournaments: {
+              ...joinedTournaments,
+              [currentTournament.id]: true,
+            },
+          });
+          setJoinedTournaments((prevState) => ({
+            ...prevState,
+            [currentTournament.id]: true,
+          }));
+
+          showRoomDetails(currentTournament);
+        } else {
+          alert('This tournament is now full.');
+        }
       }
     } catch (error) {
-      console.error("Error joining tournament:", error);
-      setError("Failed to join the tournament.");
+      console.error('Error joining tournament:', error);
+      alert('An error occurred while trying to join the tournament.');
+    } finally {
+      setFormDialogOpen(false);
     }
   };
 
-  if (isLoading) {
-    return <Loader active inline="centered" />;
-  }
+  const showRoomDetails = (tournament) => {
+    setDialogContent({
+      roomId: tournament.roomId,
+      roomPassword: tournament.roomPassword,
+    });
+    setDialogOpen(true);
+  };
 
-  if (error) {
-    return <div>{error}</div>;
-  }
-
-  if (!tournament) {
-    return <div>Error loading tournament data.</div>;
-  }
-
-  const {
-    title,
-    tournamentName,
-    description,
-    entryFee,
-    prizePool,
-    imageUrl,
-    isPaid,
-    mapName,
-    participants,
-    roomId,
-    roomPassword,
-    tournamentType,
-  } = tournament;
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setDialogContent({});
+  };
 
   return (
-    <Card fluid>
-      <Image src={imageUrl} wrapped ui={false} alt={`${title} Tournament`} />
-      <Card.Content>
-        <Card.Header>{title} <FaTrophy style={{ color: 'gold' }} /></Card.Header>
-        <Card.Meta>{tournamentName} • {tournamentType} 🕹️</Card.Meta>
-        <Card.Description>{description || "Join the battle for glory!"}</Card.Description>
-        <Card.Description>
-          <Icon name="money bill alternate outline" /> Entry Fee: {isPaid ? `$${entryFee}` : 'Free'}
-        </Card.Description>
-        <Card.Description>
-          <FaTrophy /> Prize Pool: ${prizePool}
-        </Card.Description>
-        <Card.Description>
-          <FaMapMarkedAlt /> Map: {mapName}
-        </Card.Description>
-        <Card.Description>
-          <FaUserFriends /> Participants: {participants}
-        </Card.Description>
-      </Card.Content>
-      <Card.Content extra>
-        {hasJoined ? (
-          <div>
-            <FaLock /> Room ID: {roomId} | Password: {roomPassword}
-          </div>
-        ) : (
-          <Button primary onClick={handleJoinTournament}>Join Tournament</Button>
-        )}
-      </Card.Content>
-    </Card>
+    <div className="tournament-card-container">
+      {tournaments.map((tournament) => (
+        <Card key={tournament.id} className="tournament-card">
+          {tournament.imageUrl && (
+            <CardMedia
+              component="img"
+              height="140"
+              image={tournament.imageUrl}
+              alt={tournament.title}
+              className="tournament-card-image"
+            />
+          )}
+          <CardContent>
+            <Typography variant="h5" component="div">
+              {tournament.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {tournament.description}
+            </Typography>
+            <Typography variant="body2" color="text.primary">
+              Entry Fee: {tournament.isPaid ? `₹${tournament.entryFee}` : 'Free'}
+            </Typography>
+            <Typography variant="body2" color="text.primary">
+              Participants: {tournament.participants}
+            </Typography>
+            <Typography variant="body2" color="text.primary">
+              Prize Pool: ₹{tournament.prizePool}
+            </Typography>
+            <Typography variant="body2" color="text.primary">
+              Map: {tournament.mapName}
+            </Typography>
+            <Typography variant="body2" color="text.primary">
+              Type: {tournament.tournamentType}
+            </Typography>
+            <div className="button-container">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => handleJoinClick(tournament)}
+                className="join-button"
+                disabled={tournament.participants === 0 || joinedTournaments[tournament.id]}
+              >
+                {joinedTournaments[tournament.id] ? 'Joined Already' : tournament.participants === 0 ? 'Tournament Full' : 'Join Tournament'}
+              </Button>
+              {joinedTournaments[tournament.id] && (
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => showRoomDetails(tournament)}
+                  className="view-credentials-button"
+                >
+                  View Credentials
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      <Dialog open={dialogOpen} onClose={handleCloseDialog}>
+        <DialogTitle>Room Details</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">Room ID: {dialogContent.roomId}</Typography>
+          <Typography variant="body1">Room Password: {dialogContent.roomPassword}</Typography>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={formDialogOpen} onClose={() => setFormDialogOpen(false)}>
+        <DialogTitle>Join Tournament</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Game Username"
+            value={gameUsername}
+            onChange={(e) => setGameUsername(e.target.value)}
+            fullWidth
+            margin="dense"
+          />
+          <TextField
+            label="Game UID"
+            value={gameUID}
+            onChange={(e) => setGameUID(e.target.value)}
+            fullWidth
+            margin="dense"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={mapDownloaded}
+                onChange={(e) => setMapDownloaded(e.target.checked)}
+              />
+            }
+            label="I have downloaded the required map."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFormDialogOpen(false)} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleSubmitForm} color="primary">
+            Join Tournament
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </div>
   );
+};
+
+TournamentCard.propTypes = {
+  onJoin: PropTypes.func.isRequired,
 };
 
 export default TournamentCard;

@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, onSnapshot, setDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { firestore, storage } from '../../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Modal from 'react-modal';
 import { v4 as uuidv4 } from 'uuid';
+import { Button, TextField, Select, MenuItem, FormControl, InputLabel, IconButton } from '@mui/material';
+import { Edit, Delete, EmojiEvents, Add, FileCopy } from '@mui/icons-material';
 import './Admin.css';
 
 Modal.setAppElement('#root');
 
+// Tournament Form Component
 const TournamentForm = ({ formData, handleChange, handleSubmit, formError, closeModal }) => (
   <div className="admin-form">
     {Object.values(formError).length > 0 && (
@@ -17,130 +20,161 @@ const TournamentForm = ({ formData, handleChange, handleSubmit, formError, close
         ))}
       </div>
     )}
-    <div className="form-group">
-      <label>Title</label>
-      <input 
-        type="text"
-        name="title"
-        value={formData.title}
+    <TextField
+      label="Title"
+      name="title"
+      value={formData.title}
+      onChange={handleChange}
+      fullWidth
+      margin="normal"
+      variant="outlined"
+      error={!!formError.title}
+      helperText={formError.title}
+    />
+    <TextField
+      label="Tournament Name"
+      name="tournamentName"
+      value={formData.tournamentName}
+      onChange={handleChange}
+      fullWidth
+      margin="normal"
+      variant="outlined"
+      error={!!formError.tournamentName}
+      helperText={formError.tournamentName}
+    />
+    <TextField
+      label="Description"
+      name="description"
+      value={formData.description}
+      onChange={handleChange}
+      fullWidth
+      margin="normal"
+      variant="outlined"
+      multiline
+      rows={4}
+      error={!!formError.description}
+      helperText={formError.description}
+    />
+    <TextField
+      label="Participants"
+      name="participants"
+      type="number"
+      value={formData.participants}
+      onChange={handleChange}
+      fullWidth
+      margin="normal"
+      variant="outlined"
+      error={!!formError.participants}
+      helperText={formError.participants}
+    />
+    <TextField
+      label="Prize Pool"
+      name="prizePool"
+      type="number"
+      value={formData.prizePool}
+      onChange={handleChange}
+      fullWidth
+      margin="normal"
+      variant="outlined"
+      error={!!formError.prizePool}
+      helperText={formError.prizePool}
+    />
+    <TextField
+      label="Room ID"
+      name="roomId"
+      value={formData.roomId}
+      onChange={handleChange}
+      fullWidth
+      margin="normal"
+      variant="outlined"
+      error={!!formError.roomId}
+      helperText={formError.roomId}
+    />
+    <TextField
+      label="Room Password"
+      name="roomPassword"
+      type="password"
+      value={formData.roomPassword}
+      onChange={handleChange}
+      fullWidth
+      margin="normal"
+      variant="outlined"
+      error={!!formError.roomPassword}
+      helperText={formError.roomPassword}
+    />
+    <FormControl fullWidth margin="normal" variant="outlined">
+      <InputLabel>Map Name</InputLabel>
+      <Select
+        name="mapName"
+        value={formData.mapName}
         onChange={handleChange}
-        placeholder="Enter title"
-      />
-    </div>
-    <div className="form-group">
-      <label>Tournament Name</label>
-      <input 
-        type="text"
-        name="tournamentName"
-        value={formData.tournamentName}
+        label="Map Name"
+      >
+        <MenuItem value="">Select Map</MenuItem>
+        <MenuItem value="Map1">Map 1</MenuItem>
+        <MenuItem value="Map2">Map 2</MenuItem>
+        <MenuItem value="Map3">Map 3</MenuItem>
+      </Select>
+    </FormControl>
+    <FormControl fullWidth margin="normal" variant="outlined">
+      <InputLabel>Tournament Type</InputLabel>
+      <Select
+        name="tournamentType"
+        value={formData.tournamentType}
         onChange={handleChange}
-        placeholder="Enter tournament name"
-      />
-    </div>
-    <div className="form-group">
-      <label>Description</label>
-      <textarea 
-        name="description"
-        value={formData.description}
+        label="Tournament Type"
+      >
+        <MenuItem value="">Select Type</MenuItem>
+        <MenuItem value="solo">Solo</MenuItem>
+        <MenuItem value="duo">Duo</MenuItem>
+        <MenuItem value="squad">Squad</MenuItem>
+      </Select>
+    </FormControl>
+    <FormControl fullWidth margin="normal" variant="outlined">
+      <InputLabel>Entry Fee</InputLabel>
+      <Select
+        name="isPaid"
+        value={formData.isPaid}
         onChange={handleChange}
-        placeholder="Enter description"
-      />
-    </div>
-    <div className="form-group">
-      <label>Participants</label>
-      <input 
-        type="number"
-        name="participants"
-        value={formData.participants}
-        onChange={handleChange}
-        placeholder="Number of participants"
-      />
-    </div>
-    <div className="form-group">
-      <label>Prize Pool</label>
-      <input 
-        type="number"
-        name="prizePool"
-        value={formData.prizePool}
-        onChange={handleChange}
-        placeholder="Prize pool amount"
-      />
-    </div>
-    <div className="form-group">
-      <label>Room ID</label>
-      <input 
-        type="text"
-        name="roomId"
-        value={formData.roomId}
-        onChange={handleChange}
-        placeholder="Room ID"
-      />
-    </div>
-    <div className="form-group">
-      <label>Room Password</label>
-      <input 
-        type="password"
-        name="roomPassword"
-        value={formData.roomPassword}
-        onChange={handleChange}
-        placeholder="Room Password"
-      />
-    </div>
-    <div className="form-group">
-      <label>Map Name</label>
-      <select name="mapName" value={formData.mapName} onChange={handleChange}>
-        <option value="">Select Map</option>
-        <option value="Map1">Map 1</option>
-        <option value="Map2">Map 2</option>
-        <option value="Map3">Map 3</option>
-      </select>
-    </div>
-    <div className="form-group">
-      <label>Tournament Type</label>
-      <select name="tournamentType" value={formData.tournamentType} onChange={handleChange}>
-        <option value="">Select Type</option>
-        <option value="solo">Solo</option>
-        <option value="duo">Duo</option>
-        <option value="squad">Squad</option>
-      </select>
-    </div>
-    <div className="form-group">
-      <label>Entry Fee</label>
-      <select name="isPaid" value={formData.isPaid} onChange={handleChange}>
-        <option value={false}>Free</option>
-        <option value={true}>Paid</option>
-      </select>
-    </div>
+        label="Entry Fee"
+      >
+        <MenuItem value={false}>Free</MenuItem>
+        <MenuItem value={true}>Paid</MenuItem>
+      </Select>
+    </FormControl>
     {formData.isPaid && (
-      <div className="form-group">
-        <label>Entry Fee Amount</label>
-        <input 
-          type="number"
-          name="entryFee"
-          value={formData.entryFee}
-          onChange={handleChange}
-          placeholder="Enter entry fee"
-        />
-      </div>
-    )}
-    <div className="form-group">
-      <label>Image</label>
-      <input 
-        type="file"
-        name="image"
-        accept="image/*"
+      <TextField
+        label="Entry Fee Amount"
+        name="entryFee"
+        type="number"
+        value={formData.entryFee}
         onChange={handleChange}
+        fullWidth
+        margin="normal"
+        variant="outlined"
+        error={!!formError.entryFee}
+        helperText={formError.entryFee}
       />
-    </div>
+    )}
+    <input
+      type="file"
+      name="image"
+      accept="image/*"
+      onChange={handleChange}
+      className="image-upload"
+    />
     <div className="form-actions">
-      <button className="btn btn-primary" onClick={handleSubmit}>
+      <Button variant="contained" color="primary" onClick={handleSubmit}>
         {formData.currentTournamentId ? 'Update Tournament' : 'Add Tournament'}
-      </button>
-      <button className="btn btn-close" onClick={closeModal}>Close</button>
+      </Button>
+      <Button variant="outlined" color="secondary" onClick={closeModal}>
+        Close
+      </Button>
     </div>
   </div>
 );
 
+// Tournament List Component
 const TournamentList = ({ tournaments, handleEdit, handleDelete, openParticipantsModal, handleDuplicate }) => (
   <div className="tournament-list">
     {tournaments.length > 0 ? (
@@ -157,10 +191,10 @@ const TournamentList = ({ tournaments, handleEdit, handleDelete, openParticipant
           <p>Map: {tournament.mapName}</p>
           <p>Type: {tournament.tournamentType}</p>
           <div className="tournament-actions">
-            <button className="btn btn-edit" onClick={() => handleEdit(tournament)}>Edit</button>
-            <button className="btn btn-delete" onClick={() => handleDelete(tournament.id)}>Delete</button>
-            <button className="btn btn-duplicate" onClick={() => handleDuplicate(tournament)}>Duplicate</button>
-            <button className="btn btn-participants" onClick={() => openParticipantsModal(tournament)}>View Participants</button>
+            <IconButton color="primary" onClick={() => handleEdit(tournament)}><Edit /></IconButton>
+            <IconButton color="secondary" onClick={() => handleDelete(tournament.id)}><Delete /></IconButton>
+            <IconButton color="info" onClick={() => openParticipantsModal(tournament)}><EmojiEvents /></IconButton>
+            <IconButton color="primary" onClick={() => handleDuplicate(tournament)}><FileCopy /></IconButton>
           </div>
         </div>
       ))
@@ -190,8 +224,6 @@ const AdminPanel = () => {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formError, setFormError] = useState({});
-  const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
-  const [selectedTournament, setSelectedTournament] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
@@ -214,40 +246,73 @@ const AdminPanel = () => {
     if (!formData.description) errors.description = "Description is required.";
     if (!formData.participants) errors.participants = "Number of participants is required.";
     if (!formData.prizePool) errors.prizePool = "Prize pool is required.";
-    if (formData.isPaid && !formData.entryFee) errors.entryFee = "Entry fee is required for paid tournaments.";
+    if (formData.isPaid && !formData.entryFee) errors.entryFee = "Entry fee is required.";
     if (!formData.roomId) errors.roomId = "Room ID is required.";
     if (!formData.roomPassword) errors.roomPassword = "Room password is required.";
+    if (!formData.mapName) errors.mapName = "Map name is required.";
+    if (!formData.tournamentType) errors.tournamentType = "Tournament type is required.";
 
     setFormError(errors);
-
     return Object.keys(errors).length === 0;
   };
 
-  const handleAddOrUpdateTournament = async () => {
+  const handleChange = (e) => {
+    const { name, value, type, files } = e.target;
+
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: type === 'file' ? files[0] : value,
+    }));
+  };
+
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
-    const tournamentData = { ...formData };
-    delete tournamentData.image; // Remove image from the data object before saving to Firestore
-
     try {
-      if (formData.image) {
-        // Upload image and get URL
-        const imageRef = ref(storage, `tournament_images/${uuidv4()}`);
-        await uploadBytes(imageRef, formData.image);
-        const imageUrl = await getDownloadURL(imageRef);
-        tournamentData.imageUrl = imageUrl;
-      }
-
       if (formData.currentTournamentId) {
-        // Update existing tournament
-        await updateDoc(doc(firestore, 'tournaments', formData.currentTournamentId), tournamentData);
+        // Update tournament
+        const tournamentRef = doc(firestore, 'tournaments', formData.currentTournamentId);
+        await updateDoc(tournamentRef, {
+          title: formData.title,
+          tournamentName: formData.tournamentName,
+          description: formData.description,
+          participants: parseInt(formData.participants, 10),
+          prizePool: parseFloat(formData.prizePool),
+          roomId: formData.roomId,
+          roomPassword: formData.roomPassword,
+          mapName: formData.mapName,
+          tournamentType: formData.tournamentType,
+          isPaid: formData.isPaid,
+          entryFee: formData.isPaid ? parseFloat(formData.entryFee) : null,
+          imageUrl: formData.imageUrl,
+        });
+        setSuccessMessage('Tournament updated successfully!');
       } else {
         // Add new tournament
-        await setDoc(doc(firestore, 'tournaments', uuidv4()), tournamentData);
+        let imageUrl = '';
+        if (formData.image) {
+          const imageRef = ref(storage, `tournament_images/${uuidv4()}`);
+          await uploadBytes(imageRef, formData.image);
+          imageUrl = await getDownloadURL(imageRef);
+        }
+        const newTournament = {
+          title: formData.title,
+          tournamentName: formData.tournamentName,
+          description: formData.description,
+          participants: parseInt(formData.participants, 10),
+          prizePool: parseFloat(formData.prizePool),
+          roomId: formData.roomId,
+          roomPassword: formData.roomPassword,
+          mapName: formData.mapName,
+          tournamentType: formData.tournamentType,
+          isPaid: formData.isPaid,
+          entryFee: formData.isPaid ? parseFloat(formData.entryFee) : null,
+          imageUrl,
+        };
+        await setDoc(doc(firestore, 'tournaments', uuidv4()), newTournament);
+        setSuccessMessage('Tournament added successfully!');
       }
 
-      setSuccessMessage('Tournament saved successfully!');
-      setIsModalOpen(false);
       setFormData({
         currentTournamentId: '',
         title: '',
@@ -264,24 +329,28 @@ const AdminPanel = () => {
         image: null,
         imageUrl: '',
       });
+      setIsModalOpen(false);
     } catch (error) {
-      console.error("Error saving tournament: ", error);
+      console.error("Error saving tournament:", error);
     }
-  };
-
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: name === 'image' ? files[0] : value
-    }));
   };
 
   const handleEdit = (tournament) => {
     setFormData({
-      ...tournament,
       currentTournamentId: tournament.id,
-      image: null // Reset image field on edit
+      title: tournament.title,
+      tournamentName: tournament.tournamentName,
+      description: tournament.description,
+      participants: tournament.participants,
+      prizePool: tournament.prizePool,
+      roomId: tournament.roomId,
+      roomPassword: tournament.roomPassword,
+      mapName: tournament.mapName,
+      tournamentType: tournament.tournamentType,
+      isPaid: tournament.isPaid,
+      entryFee: tournament.entryFee,
+      image: null,
+      imageUrl: tournament.imageUrl,
     });
     setIsModalOpen(true);
   };
@@ -291,56 +360,33 @@ const AdminPanel = () => {
       await deleteDoc(doc(firestore, 'tournaments', id));
       setSuccessMessage('Tournament deleted successfully!');
     } catch (error) {
-      console.error("Error deleting tournament: ", error);
+      console.error("Error deleting tournament:", error);
     }
   };
 
   const handleDuplicate = async (tournament) => {
+    const duplicatedTournament = { ...tournament, id: uuidv4() };
+    delete duplicatedTournament.id;
     try {
-      const newTournamentData = { ...tournament, title: `${tournament.title} (Copy)`, currentTournamentId: '' };
-      delete newTournamentData.id;
-      await setDoc(doc(firestore, 'tournaments', uuidv4()), newTournamentData);
+      await setDoc(doc(firestore, 'tournaments', uuidv4()), duplicatedTournament);
       setSuccessMessage('Tournament duplicated successfully!');
     } catch (error) {
-      console.error("Error duplicating tournament: ", error);
+      console.error("Error duplicating tournament:", error);
     }
   };
 
   const openParticipantsModal = (tournament) => {
-    setSelectedTournament(tournament);
-    setIsParticipantsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setFormData({
-      currentTournamentId: '',
-      title: '',
-      tournamentName: '',
-      description: '',
-      participants: '',
-      prizePool: '',
-      roomId: '',
-      roomPassword: '',
-      mapName: '',
-      tournamentType: '',
-      isPaid: false,
-      entryFee: '',
-      image: null,
-      imageUrl: '',
-    });
-    setFormError({});
-  };
-
-  const closeParticipantsModal = () => {
-    setIsParticipantsModalOpen(false);
-    setSelectedTournament(null);
+    // Handle opening participants modal if necessary
   };
 
   return (
     <div className="admin-panel">
-      <button className="btn btn-add" onClick={() => setIsModalOpen(true)}>Add Tournament</button>
-      {successMessage && <div className="success-message">{successMessage}</div>}
+      <div className="header">
+        <h1>Admin Panel</h1>
+        <Button variant="contained" color="primary" onClick={() => setIsModalOpen(true)}>
+          Add Tournament
+        </Button>
+      </div>
       <TournamentList
         tournaments={tournaments}
         handleEdit={handleEdit}
@@ -350,32 +396,20 @@ const AdminPanel = () => {
       />
       <Modal
         isOpen={isModalOpen}
-        onRequestClose={closeModal}
+        onRequestClose={() => setIsModalOpen(false)}
         contentLabel="Tournament Form"
         className="modal"
-        overlayClassName="overlay"
+        overlayClassName="modal-overlay"
       >
         <TournamentForm
           formData={formData}
           handleChange={handleChange}
-          handleSubmit={handleAddOrUpdateTournament}
+          handleSubmit={handleSubmit}
           formError={formError}
-          closeModal={closeModal}
+          closeModal={() => setIsModalOpen(false)}
         />
       </Modal>
-      <Modal
-        isOpen={isParticipantsModalOpen}
-        onRequestClose={closeParticipantsModal}
-        contentLabel="Participants"
-        className="modal"
-        overlayClassName="overlay"
-      >
-        <div className="participants-modal">
-          <h2>Participants for {selectedTournament?.title}</h2>
-          {/* Add logic to list participants */}
-          <button className="btn btn-close" onClick={closeParticipantsModal}>Close</button>
-        </div>
-      </Modal>
+      {successMessage && <div className="success-message">{successMessage}</div>}
     </div>
   );
 };

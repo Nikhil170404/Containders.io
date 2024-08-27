@@ -1,22 +1,25 @@
 .admin-panel {
   padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.admin-panel .btn {
+.btn {
   margin: 10px 0;
 }
 
 .tournament-list {
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
 .tournament-item {
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 10px;
-  margin-bottom: 10px;
   overflow: hidden;
+  background: #fff;
 }
 
 .tournament-header {
@@ -39,6 +42,7 @@
 .tournament-actions {
   display: flex;
   gap: 10px;
+  margin-top: 10px;
 }
 
 .admin-form {
@@ -79,13 +83,18 @@
   margin-top: 20px;
 }
 
-.btn-primary {
-  background-color: #007bff;
-  color: #fff;
+.btn-primary,
+.btn-close {
   border: none;
   padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 0.9em;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: #fff;
 }
 
 .btn-primary:hover {
@@ -95,10 +104,6 @@
 .btn-close {
   background-color: #6c757d;
   color: #fff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
 }
 
 .btn-close:hover {
@@ -106,7 +111,7 @@
 }
 
 .admin-modal {
-  max-width: 600px;
+  max-width: 90%;
   margin: auto;
   padding: 20px;
   background: #fff;
@@ -121,4 +126,64 @@
   max-height: 80vh;
   overflow-y: auto;
   padding: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .tournament-item {
+    padding: 15px;
+  }
+
+  .tournament-image {
+    max-width: 80px;
+    max-height: 80px;
+  }
+
+  .btn {
+    width: 100%;
+    margin: 5px 0;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-close {
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .admin-modal {
+    max-width: 100%;
+  }
+
+  .admin-panel {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-form {
+    padding: 10px;
+  }
+
+  .form-group {
+    margin-bottom: 10px;
+  }
+
+  .form-group input,
+  .form-group select {
+    padding: 6px;
+  }
+}
+.tournament-actions {
+  display: flex;
+  flex-direction: column; /* Stack buttons vertically */
+  gap: 8px; /* Add spacing between buttons */
+  align-items: flex-start; /* Align buttons to the start */
+}
+
+.tournament-actions .MuiIconButton-root {
+  width: 100%; /* Make buttons full-width if needed */
 }

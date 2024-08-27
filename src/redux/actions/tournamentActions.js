@@ -1,9 +1,17 @@
+// actions/tournamentActions.js
+
 import {
-  FETCH_TOURNAMENTS_REQUEST, FETCH_TOURNAMENTS_SUCCESS, FETCH_TOURNAMENTS_FAILURE,
-  ADD_TOURNAMENT_SUCCESS, ADD_TOURNAMENT_FAILURE,
-  DELETE_TOURNAMENT_SUCCESS, DELETE_TOURNAMENT_FAILURE,
-  UPDATE_TOURNAMENT_SUCCESS, UPDATE_TOURNAMENT_FAILURE,
-  JOIN_TOURNAMENT_SUCCESS, JOIN_TOURNAMENT_FAILURE
+  FETCH_TOURNAMENTS_REQUEST,
+  FETCH_TOURNAMENTS_SUCCESS,
+  FETCH_TOURNAMENTS_FAILURE,
+  ADD_TOURNAMENT_SUCCESS,
+  ADD_TOURNAMENT_FAILURE,
+  DELETE_TOURNAMENT_SUCCESS,
+  DELETE_TOURNAMENT_FAILURE,
+  UPDATE_TOURNAMENT_SUCCESS,
+  UPDATE_TOURNAMENT_FAILURE,
+  JOIN_TOURNAMENT_SUCCESS,
+  JOIN_TOURNAMENT_FAILURE
 } from './types';
 import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { firestore } from '../../firebase';
@@ -51,12 +59,14 @@ export const updateTournament = (id, updatedData) => async (dispatch) => {
 };
 
 // Join a tournament
-export const joinTournament = (tournamentId, entryFee, title) => ({
-  type: JOIN_TOURNAMENT_SUCCESS,
-  payload: { tournamentId, entryFee, title }
-});
-
-export const joinTournamentFailure = (error) => ({
-  type: JOIN_TOURNAMENT_FAILURE,
-  payload: error
-});
+export const joinTournament = (tournamentId, userId) => async (dispatch) => {
+  try {
+    const tournamentRef = doc(firestore, 'tournaments', tournamentId);
+    await updateDoc(tournamentRef, {
+      participants: arrayUnion(userId)
+    });
+    dispatch({ type: JOIN_TOURNAMENT_SUCCESS, payload: { tournamentId, userId } });
+  } catch (error) {
+    dispatch({ type: JOIN_TOURNAMENT_FAILURE, payload: error.message });
+  }
+};
