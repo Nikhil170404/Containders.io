@@ -145,7 +145,6 @@ const Community = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedPost, setSelectedPost] = useState(null);
   const [editingPost, setEditingPost] = useState(null);
 
   useEffect(() => {

@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import './LandingPage.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrophy, faGamepad, faUsers, faStar, faEnvelope } from '@fortawesome/free-solid-svg-icons';
+import { faTrophy, faGamepad, faUsers } from '@fortawesome/free-solid-svg-icons';
+
+const LazyImage = React.lazy(() => import('./LazyImage'));
 
 const LandingPage = () => {
   return (
@@ -10,11 +12,11 @@ const LandingPage = () => {
         <h1>Welcome to the Ultimate Esports Platform</h1>
         <p>Experience thrilling esports tournaments and join a global gaming community.</p>
         <div className="cta-buttons">
-          <a href="/register" className="cta-button primary">Get Started</a>
-          <a href="/learn-more" className="cta-button secondary">Learn More</a>
+          <a href="/register" className="cta-button primary" aria-label="Get Started">Get Started</a>
+          <a href="/learn-more" className="cta-button secondary" aria-label="Learn More">Learn More</a>
         </div>
       </section>
-      
+
       <section className="info-section">
         <div className="info-card">
           <FontAwesomeIcon icon={faTrophy} className="info-icon" />
@@ -36,11 +38,13 @@ const LandingPage = () => {
       <section className="game-of-the-week">
         <h2>Game of the Week</h2>
         <div className="game-card">
-          <img src="/src/game-of-the-week.jpg" alt="Game of the Week" className="game-image" />
+          <Suspense fallback={<div>Loading...</div>}>
+            <LazyImage src="/src/game-of-the-week.jpg" alt="Game of the Week" className="game-image" />
+          </Suspense>
           <div className="game-info">
             <h3>Battle Royale Legends</h3>
             <p>Join the most exciting game of the week and compete for amazing rewards!</p>
-            <a href="/game-of-the-week" className="cta-button primary">Play Now</a>
+            <a href="/game-of-the-week" className="cta-button primary" aria-label="Play Now">Play Now</a>
           </div>
         </div>
       </section>
@@ -49,11 +53,11 @@ const LandingPage = () => {
         <h2>Stay Updated</h2>
         <p>Sign up for our newsletter to receive exclusive updates and offers.</p>
         <form className="newsletter-form">
-          <input type="email" placeholder="Enter your email" required />
-          <button type="submit" className="cta-button primary">Subscribe</button>
+          <input type="email" placeholder="Enter your email" required aria-label="Enter your email" />
+          <button type="submit" className="cta-button primary" aria-label="Subscribe">Subscribe</button>
         </form>
       </section>
-      
+
       <section className="testimonials">
         <h2>What Our Players Say</h2>
         <div className="testimonial-card">
@@ -65,12 +69,12 @@ const LandingPage = () => {
           <h4>– Jamie L.</h4>
         </div>
       </section>
-      
+
       <footer className="footer">
         <p>&copy; 2024 Esports Platform. All rights reserved.</p>
         <div className="footer-links">
-          <a href="/about" className="footer-link">About Us</a>
-          <a href="/contact" className="footer-link">Contact</a>
+          <a href="/aboutus" className="footer-link">About Us</a>
+          <a href="/contactus" className="footer-link">Contact</a>
           <a href="/privacy" className="footer-link">Privacy Policy</a>
         </div>
       </footer>
