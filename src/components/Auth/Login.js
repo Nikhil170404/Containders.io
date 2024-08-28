@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../../redux/actions/authAction';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '../../firebase';
-import { FcGoogle } from 'react-icons/fc';
 import './Auth.css';
 
 const Login = () => {
@@ -25,24 +22,6 @@ const Login = () => {
     }
     setLoading(false);
   }, [user, error, navigate]);
-
-  const handleGoogleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      setLoading(true);
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // Dispatching login with email and empty password for Google auth
-      dispatch(login(user.email, ''));
-      setMessage('Login successful!');
-    } catch (error) {
-      console.error("Google sign-in error: ", error);
-      setMessage('Login failed, please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -79,9 +58,6 @@ const Login = () => {
           {loading ? 'Logging in...' : 'Login'}
         </button>
       </form>
-      <button className="google-signin-button" onClick={handleGoogleSignIn} disabled={loading}>
-        <FcGoogle size={20} /> Login with Google
-      </button>
     </div>
   );
 };

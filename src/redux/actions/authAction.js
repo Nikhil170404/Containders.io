@@ -3,9 +3,7 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   createUserWithEmailAndPassword, 
-  updateProfile, 
-  GoogleAuthProvider, 
-  signInWithPopup 
+  updateProfile 
 } from 'firebase/auth';
 import { setDoc, doc, updateDoc, getDoc, getDocs, collection, query, where } from 'firebase/firestore';
 
@@ -37,35 +35,6 @@ export const login = (email, password) => async (dispatch) => {
   } catch (error) {
     dispatch({ type: 'LOGIN_FAILURE', payload: error.message });
     console.error('Login failed:', error.message);
-  }
-};
-
-// Action for Google Sign-In
-export const googleSignIn = () => async (dispatch) => {
-  dispatch({ type: 'LOGIN_REQUEST' });
-  const provider = new GoogleAuthProvider();
-  try {
-    const userCredential = await signInWithPopup(auth, provider);
-    const user = userCredential.user;
-    const isAdmin = user.uid === ADMIN_UID;
-
-    const userPurchasesRef = doc(firestore, 'userPurchases', user.uid);
-    const userPurchasesDoc = await getDoc(userPurchasesRef);
-
-    let purchasedGames = [];
-    if (userPurchasesDoc.exists()) {
-      purchasedGames = userPurchasesDoc.data().purchases || [];
-    } else {
-      await setDoc(userPurchasesRef, { purchases: [] });
-    }
-
-    const userData = { ...user, isAdmin };
-    dispatch({ type: 'LOGIN_SUCCESS', payload: { user: userData, purchasedGames } });
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('lastActivity', new Date().toString());
-  } catch (error) {
-    dispatch({ type: 'LOGIN_FAILURE', payload: error.message });
-    console.error('Google Sign-In failed:', error.message);
   }
 };
 

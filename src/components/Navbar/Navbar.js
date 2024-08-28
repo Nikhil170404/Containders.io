@@ -58,7 +58,6 @@ const Navbar = () => {
     { to: '/home', icon: 'home', label: 'Home' },
     { to: '/aboutus', icon: 'info-circle', label: 'About' },
     { to: '/contactus', icon: 'envelope', label: 'Contact' },
-    { to: '/events', icon: 'calendar', label: 'Events' }
   ];
 
   const userNavItems = [
@@ -71,7 +70,6 @@ const Navbar = () => {
       to: '#', icon: 'users', label: 'Community', dropdown: true, dropdownItems: [
         { to: '/community', label: 'View Posts' },
         { to: '/events', label: 'Upcoming Events' },
-        { to: '/chat', label: 'Chat' },
         { to: '/groupmanagement', label: 'Groups' }
       ]
     },

@@ -9,7 +9,7 @@ import Signup from './components/Auth/Signup';
 import Login from './components/Auth/Login';
 import Profile from './components/Profile/Profile';
 import Admin from './components/Admin/Admin';
-import AdminTransactions from './components/Admin/AdminTransaction'; // Import AdminTransactions component
+import AdminTransactions from './components/Admin/AdminTransaction';
 import AboutUs from './components/AboutUs/AboutUs';
 import ContactUs from './components/ContactUs/ContactUs';
 import Tournaments from './components/Tournaments/Tournaments';
@@ -73,7 +73,7 @@ const App = () => {
           />
           <Route
             path="/admin/transactions"
-            element={user && user.isAdmin ? <AdminTransactions /> : <Navigate to="/login" />} // Add AdminTransactions route
+            element={user && user.isAdmin ? <AdminTransactions /> : <Navigate to="/login" />}
           />
           <Route path="/aboutus" element={<AboutUs />} />
           <Route path="/contactus" element={<ContactUs />} />
