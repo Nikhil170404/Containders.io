@@ -64,7 +64,6 @@ const Navbar = () => {
     ...commonNavItems,
     { to: '/profile', icon: 'user', label: 'Profile' },
     { to: '/wallet', icon: 'wallet', label: 'Wallet' },
-    { to: '/tournaments', icon: 'gamepad', label: 'Tournaments' },
     { to: '/leaderboard', icon: 'trophy', label: 'Leaderboard' },
     {
       to: '#', icon: 'users', label: 'Community', dropdown: true, dropdownItems: [

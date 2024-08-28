@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { signup } from '../../redux/actions/authAction';
-import { Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import './Auth.css';
 
@@ -13,27 +13,25 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user, error } = useSelector((state) => state.auth);
-
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
+    setMessage(''); // Clear any previous messages
     dispatch(signup({ email, password, name, age }));
   };
 
   useEffect(() => {
     if (user) {
-      setMessage('Signup successful!');
+      setMessage('Signup successful! Please go to the login page to enter.');
+      setLoading(false);
     } else if (error) {
       setMessage(error);
+      setLoading(false);
     }
-    setLoading(false);
   }, [user, error]);
-
-  if (user) {
-    return <Navigate to="/" />;
-  }
 
   return (
     <div className="auth-container">
@@ -92,7 +90,11 @@ const Signup = () => {
           {loading ? 'Signing up...' : 'Sign Up'}
         </button>
       </form>
-      
+      {user && (
+        <div className="success-message">
+          <p>Signup successful! Please <button onClick={() => navigate('/login')} className="link-button">click here</button> to go to the login page.</p>
+        </div>
+      )}
     </div>
   );
 };

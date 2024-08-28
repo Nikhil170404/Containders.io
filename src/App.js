@@ -12,7 +12,6 @@ import Admin from './components/Admin/Admin';
 import AdminTransactions from './components/Admin/AdminTransaction';
 import AboutUs from './components/AboutUs/AboutUs';
 import ContactUs from './components/ContactUs/ContactUs';
-import Tournaments from './components/Tournaments/Tournaments';
 import Leaderboard from './components/Leaderboard/Leaderboard';
 import Settings from './components/Settings/Settings';
 import Community from './components/Community/Community';
@@ -77,10 +76,7 @@ const App = () => {
           />
           <Route path="/aboutus" element={<AboutUs />} />
           <Route path="/contactus" element={<ContactUs />} />
-          <Route
-            path="/tournaments"
-            element={user ? <Tournaments /> : <Navigate to="/login" />}
-          />
+         
           <Route
             path="/leaderboard"
             element={user ? <Leaderboard /> : <Navigate to="/login" />}
