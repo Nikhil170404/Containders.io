@@ -5,7 +5,7 @@ import { purchaseTournament } from '../../redux/actions/authAction';
 import TournamentCard from './TournamentCard';
 import Loader from '../Loader/Loader';
 import './Home.css';
-import { FaSearch, FaSort, FaTrashAlt } from 'react-icons/fa';
+import { FaSearch, FaSort, FaTrashAlt, FaBell } from 'react-icons/fa';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { firestore } from '../../firebase';
 
@@ -20,6 +20,8 @@ const Home = () => {
   const [favorites, setFavorites] = useState([]);
   const [realTimeTournaments, setRealTimeTournaments] = useState([]);
   const [filterType, setFilterType] = useState('all');
+  const [showNotifications, setShowNotifications] = useState(false);
+
   const tournamentsPerPage = 10;
 
   useEffect(() => {
@@ -62,6 +64,10 @@ const Home = () => {
           return (a.entryFee || 0) - (b.entryFee || 0);
         case 'prizeMoney':
           return (b.prizeMoney || 0) - (a.prizeMoney || 0);
+        case 'date':
+          return new Date(a.date) - new Date(b.date);
+        case 'popularity':
+          return (b.participants || 0) - (a.participants || 0);
         default:
           return 0;
       }
@@ -82,6 +88,10 @@ const Home = () => {
     setFilterText('');
     setSortOption('title');
     setFilterType('all');
+  };
+
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
   };
 
   const sortedTournaments = sortTournaments(realTimeTournaments || [], sortOption);
@@ -135,6 +145,8 @@ const Home = () => {
                 <option value="participants">Participants</option>
                 <option value="entryFee">Entry Fee</option>
                 <option value="prizeMoney">Prize Money</option>
+                <option value="date">Date</option>
+                <option value="popularity">Popularity</option>
               </select>
             </div>
             <div className="filter-group">
@@ -154,6 +166,10 @@ const Home = () => {
               <FaTrashAlt className="icon" />
               Clear Filters
             </button>
+            <button onClick={toggleNotifications} className="notifications-btn">
+              <FaBell className={`icon ${showNotifications ? 'active' : ''}`} />
+              {showNotifications ? 'Hide' : 'Show'} Notifications
+            </button>
           </section>
           <section className="featured-tournaments">
             <h2>🏆 Featured Tournaments:</h2>
@@ -171,15 +187,29 @@ const Home = () => {
             </div>
           </section>
           <div className="pagination">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              className="page-btn"
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
             {[...Array(totalPages).keys()].map((number) => (
               <button
-                key={number}
+                key={number + 1}
                 onClick={() => handlePageChange(number + 1)}
                 className={`page-btn ${currentPage === number + 1 ? 'active' : ''}`}
               >
                 {number + 1}
               </button>
             ))}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              className="page-btn"
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
           </div>
         </>
       )}

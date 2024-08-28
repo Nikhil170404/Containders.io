@@ -5,7 +5,8 @@ import './Tournaments.css';
 
 const Tournaments = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({ gameType: '', dateRange: '' });
+  const [filters, setFilters] = useState({ gameType: '', dateRange: '', minPrizePool: '' });
+  const [sortOption, setSortOption] = useState('');
   const [tournaments, setTournaments] = useState([]);
 
   useEffect(() => {
@@ -31,7 +32,7 @@ const Tournaments = () => {
 
     if (searchTerm) {
       filtered = filtered.filter(tournament =>
-        tournament.tournamentName.toLowerCase().includes(searchTerm.toLowerCase())
+        tournament.title.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -49,8 +50,24 @@ const Tournaments = () => {
       });
     }
 
+    if (filters.minPrizePool) {
+      filtered = filtered.filter(tournament =>
+        tournament.prizePool >= parseFloat(filters.minPrizePool)
+      );
+    }
+
     return filtered;
   }, [searchTerm, filters, tournaments]);
+
+  const sortedTournaments = useMemo(() => {
+    const sorted = [...filteredTournaments];
+    if (sortOption === 'date') {
+      sorted.sort((a, b) => new Date(a.date) - new Date(b.date));
+    } else if (sortOption === 'prizePool') {
+      sorted.sort((a, b) => b.prizePool - a.prizePool);
+    }
+    return sorted;
+  }, [filteredTournaments, sortOption]);
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -59,6 +76,10 @@ const Tournaments = () => {
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters(prevFilters => ({ ...prevFilters, [name]: value }));
+  };
+
+  const handleSortChange = (e) => {
+    setSortOption(e.target.value);
   };
 
   return (
@@ -87,15 +108,28 @@ const Tournaments = () => {
           value={filters.dateRange}
           onChange={handleFilterChange}
         />
+        <input
+          type="number"
+          name="minPrizePool"
+          placeholder="Min Prize Pool"
+          value={filters.minPrizePool}
+          onChange={handleFilterChange}
+        />
+        <select name="sortOption" onChange={handleSortChange} value={sortOption}>
+          <option value="">Sort By</option>
+          <option value="date">Date</option>
+          <option value="prizePool">Prize Pool</option>
+        </select>
       </div>
 
       <div className="tournament-list">
-        {filteredTournaments.length > 0 ? (
-          filteredTournaments.map(tournament => (
+        {sortedTournaments.length > 0 ? (
+          sortedTournaments.map(tournament => (
             <div key={tournament.id} className="tournament-card">
               <h2>{tournament.title}</h2>
-              <p>Game: {tournament.tournamentName}</p>
-              <p>Date: {tournament.date}</p>
+              <p>Game: {tournament.gameType}</p>
+              <p>Date: {new Date(tournament.date).toDateString()}</p>
+              <p>Prize Pool: ₹{tournament.prizePool}</p>
               <p>{tournament.description}</p>
               <button>Join Tournament</button>
             </div>

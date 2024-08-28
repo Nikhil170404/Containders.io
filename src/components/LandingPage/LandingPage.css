@@ -4,6 +4,7 @@ body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  background-color: #f0f2f5;
 }
 
 .landing-page {
@@ -17,43 +18,57 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 60vh;
+  height: 80vh;
   text-align: center;
   background: url('/src/background.jpg') no-repeat center center/cover;
   color: #fff;
-  padding: 20px;
-  box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.5);
+  padding: 40px;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-section h1 {
-  font-size: 3rem;
+  font-size: 3.5rem;
   margin: 0;
   animation: fadeIn 2s ease-out;
 }
 
 .hero-section p {
-  font-size: 1.25rem;
-  margin: 10px 0;
+  font-size: 1.5rem;
+  margin: 20px 0;
   animation: fadeIn 2s ease-out 0.5s;
 }
 
 .cta-buttons {
-  margin-top: 1.5rem;
+  margin-top: 2rem;
 }
 
 .cta-button {
   margin: 0 1rem;
-  padding: 0.75rem 1.5rem;
-  background-color: #007bff;
+  padding: 0.75rem 2rem;
+  border-radius: 5px;
   color: #fff;
   text-decoration: none;
-  border-radius: 5px;
-  transition: background-color 0.3s ease, transform 0.3s ease;
+  font-weight: bold;
   display: inline-block;
+  transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
-.cta-button:hover {
+.cta-button.primary {
+  background-color: #007bff;
+}
+
+.cta-button.primary:hover {
   background-color: #0056b3;
+  transform: scale(1.05);
+}
+
+.cta-button.secondary {
+  background-color: #6c757d;
+}
+
+.cta-button.secondary:hover {
+  background-color: #5a6268;
   transform: scale(1.05);
 }
 
@@ -72,7 +87,7 @@ body {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   padding: 20px;
   margin: 10px;
-  width: 280px;
+  width: 280px; /* Adjusted width */
   text-align: center;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -92,33 +107,154 @@ body {
   color: #666;
 }
 
-/* Footer */
-.footer {
-  background-color: #333;
-  color: #fff;
-  padding: 1rem 0;
+.info-icon {
+  font-size: 60px;
+  color: #007bff;
+  margin-bottom: 10px;
+}
+
+/* Game of the Week Section */
+.game-of-the-week {
+  background-color: #fff;
+  padding: 2rem 1rem;
   text-align: center;
+}
+
+.game-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 800px;
+  margin: 0 auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.game-image {
   width: 100%;
+  border-bottom: 1px solid #ddd;
+}
+
+.game-info {
+  padding: 20px;
+}
+
+.game-info h3 {
+  font-size: 1.75rem;
+  margin-bottom: 10px;
+}
+
+.game-info p {
+  font-size: 1rem;
+  color: #666;
+}
+
+.game-info .cta-button {
+  margin-top: 1rem;
+}
+
+/* Newsletter Section */
+.newsletter {
+  background-color: #f1f1f1;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.newsletter h2 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.newsletter p {
+  font-size: 1rem;
+  margin-bottom: 20px;
+}
+
+.newsletter-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0 auto;
+}
+
+.newsletter-form input {
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.newsletter-form button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 5px;
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.newsletter-form button:hover {
+  background-color: #0056b3;
+}
+
+/* Testimonials Section */
+.testimonials {
+  background-color: #fff;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.testimonial-card {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 10px auto;
+  max-width: 600px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.testimonial-card p {
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+
+.testimonial-card h4 {
+  font-size: 1rem;
+  color: #333;
+}
+
+/* Footer Section */
+.footer {
+  background-color: #343a40;
+  color: #fff;
+  padding: 1rem;
+  text-align: center;
 }
 
 .footer p {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.875rem;
 }
 
 .footer-links {
-  margin-top: 0.5rem;
+  margin-top: 10px;
 }
 
 .footer-link {
-  color: #ffc107;
+  color: #fff;
   text-decoration: none;
-  margin: 0 0.5rem;
-  transition: color 0.3s ease;
+  margin: 0 10px;
+  font-size: 0.875rem;
 }
 
 .footer-link:hover {
-  color: #e0a800;
+  text-decoration: underline;
 }
 
 /* Animations */
@@ -131,16 +267,93 @@ body {
   }
 }
 
-@keyframes bounceIn {
-  0% {
-    transform: scale(0.5);
-    opacity: 0;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-section {
+    height: auto;
+    padding: 20px;
   }
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
+
+  .hero-section h1 {
+    font-size: 2.5rem;
   }
-  100% {
-    transform: scale(1);
+
+  .hero-section p {
+    font-size: 1.25rem;
+  }
+
+  .cta-buttons {
+    flex-direction: column;
+  }
+
+  .cta-button {
+    margin: 10px 0;
+    padding: 0.5rem 1.5rem;
+  }
+
+  .info-section {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .info-card {
+    width: 90%;
+    max-width: 500px;
+  }
+
+  .game-card {
+    width: 90%;
+    max-width: 500px;
+  }
+
+  .newsletter-form {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .newsletter-form input,
+  .newsletter-form button {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  .testimonial-card {
+    width: 90%;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-section h1 {
+    font-size: 2rem;
+  }
+
+  .hero-section p {
+    font-size: 1rem;
+  }
+
+  .info-card {
+    width: 100%;
+    max-width: 400px;
+    margin: 10px auto;
+  }
+
+  .game-card {
+    width: 100%;
+    max-width: 400px;
+    margin: 10px auto;
+  }
+
+  .newsletter-form input,
+  .newsletter-form button {
+    max-width: 100%;
+  }
+
+  .testimonial-card {
+    width: 100%;
+    max-width: 400px;
+    margin: 10px auto;
   }
 }

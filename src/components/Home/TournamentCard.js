@@ -97,7 +97,7 @@ const TournamentCard = ({ onJoin }) => {
         const tournamentData = tournamentDoc.data();
 
         if (tournamentData.participants > 0) {
-          // Update participant count
+          // Update participant count and add participant data
           await updateDoc(tournamentRef, {
             participants: tournamentData.participants - 1,
             participantsData: arrayUnion({
@@ -109,7 +109,7 @@ const TournamentCard = ({ onJoin }) => {
           });
 
           if (currentTournament.isPaid) {
-            // Deduct entry fee from wallet
+            // Deduct entry fee from wallet and update wallet balance
             const newBalance = wallet.balance - currentTournament.entryFee;
             const walletRef = doc(firestore, 'wallets', user.uid);
             await updateDoc(walletRef, {
