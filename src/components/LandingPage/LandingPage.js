@@ -39,7 +39,7 @@ const LandingPage = () => {
         <h2>Game of the Week</h2>
         <div className="game-card">
           <Suspense fallback={<div>Loading...</div>}>
-            <LazyImage src="/src/game-of-the-week.jpg" alt="Game of the Week" className="game-image" />
+            <LazyImage src="" alt="Game of the Week" className="game-image" />
           </Suspense>
           <div className="game-info">
             <h3>Battle Royale Legends</h3>

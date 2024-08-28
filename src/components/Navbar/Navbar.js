@@ -68,7 +68,7 @@ const Navbar = () => {
     { to: '/tournaments', icon: 'gamepad', label: 'Tournaments' },
     { to: '/leaderboard', icon: 'trophy', label: 'Leaderboard' },
     {
-      to: '#', icon: 'userpostss', label: 'Community', dropdown: true, dropdownItems: [
+      to: '#', icon: 'users', label: 'Community', dropdown: true, dropdownItems: [
         { to: '/community', label: 'View Posts' },
         { to: '/events', label: 'Upcoming Events' },
         { to: '/chat', label: 'Chat' },
@@ -99,7 +99,7 @@ const Navbar = () => {
       </button>
       <div className={`sidebar ${isSidebarOpen ? 'active' : ''}`}>
         <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)}>
-          <span className="sr-only"></span>
+          <span className="sr-only">Close</span>
         </button>
         <div className="sidebar-menu">
           <ul className="sidebar-links">
