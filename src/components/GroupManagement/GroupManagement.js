@@ -13,7 +13,7 @@ import {
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { app } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
-import { FaPlus, FaTrash, FaTimes, FaPaperPlane } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaTimes, FaPaperPlane, FaUserCircle } from 'react-icons/fa';
 import Modal from 'react-modal';
 import './GroupManagement.css';
 
@@ -188,7 +188,7 @@ const GroupManagement = () => {
             {msg.message}
           </div>
           <div className="chat-message-timestamp">
-            {new Date(msg.timestamp.seconds * 1000).toLocaleTimeString()}
+            {new Date(msg.timestamp.toDate()).toLocaleTimeString()}
           </div>
         </div>
       </div>
