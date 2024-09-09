@@ -21,6 +21,7 @@ const TournamentCard = ({ onJoin }) => {
   const [gameUID, setGameUID] = useState('');
   const [mapDownloaded, setMapDownloaded] = useState(false);
   const [currentTournament, setCurrentTournament] = useState(null);
+  const [showWhatsAppButton, setShowWhatsAppButton] = useState(false);
 
   const { user } = useSelector((state) => state.auth);
   const wallet = useSelector((state) => state.wallet);
@@ -138,6 +139,7 @@ const TournamentCard = ({ onJoin }) => {
           }));
 
           showRoomDetails(currentTournament);
+          setShowWhatsAppButton(true);
         } else {
           alert('This tournament is now full.');
         }
@@ -228,6 +230,22 @@ const TournamentCard = ({ onJoin }) => {
         <DialogContent>
           <Typography variant="body1">Room ID: {dialogContent.roomId}</Typography>
           <Typography variant="body1">Room Password: {dialogContent.roomPassword}</Typography>
+          {showWhatsAppButton && currentTournament.whatsappGroupLink && (
+            <div className="whatsapp-group">
+              <Typography variant="body1" color="text.primary">
+                For further details and notifications, please join the WhatsApp group:
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                href={currentTournament.whatsappGroupLink}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Join WhatsApp Group
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

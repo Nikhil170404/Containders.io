@@ -102,6 +102,17 @@ const TournamentForm = ({ formData, handleChange, handleSubmit, formError, close
       error={!!formError.roomPassword}
       helperText={formError.roomPassword}
     />
+    <TextField
+      label="WhatsApp Group Link"
+      name="whatsappGroupLink"
+      value={formData.whatsappGroupLink}
+      onChange={handleChange}
+      fullWidth
+      margin="normal"
+      variant="outlined"
+      error={!!formError.whatsappGroupLink}
+      helperText={formError.whatsappGroupLink}
+    />
     <FormControl fullWidth margin="normal" variant="outlined">
       <InputLabel>Map Name</InputLabel>
       <Select
@@ -190,6 +201,11 @@ const TournamentList = ({ tournaments, handleEdit, handleDelete, openParticipant
           <p>Prize Pool: ₹{tournament.prizePool}</p>
           <p>Map: {tournament.mapName}</p>
           <p>Type: {tournament.tournamentType}</p>
+          {tournament.whatsappGroupLink && (
+            <p>
+              WhatsApp Group: <a href={tournament.whatsappGroupLink} target="_blank" rel="noopener noreferrer">Join</a>
+            </p>
+          )}
           <div className="tournament-actions">
             <IconButton color="primary" onClick={() => handleEdit(tournament)}><Edit /></IconButton>
             <IconButton color="secondary" onClick={() => handleDelete(tournament.id)}><Delete /></IconButton>
@@ -221,6 +237,7 @@ const AdminPanel = () => {
     entryFee: '',
     image: null,
     imageUrl: '',
+    whatsappGroupLink: '',
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formError, setFormError] = useState({});
@@ -251,6 +268,7 @@ const AdminPanel = () => {
     if (!formData.mapName) errors.mapName = "Map name is required.";
     if (!formData.tournamentType) errors.tournamentType = "Tournament type is required.";
     if (formData.isPaid && !formData.entryFee) errors.entryFee = "Entry fee is required for paid tournaments.";
+    if (!formData.whatsappGroupLink) errors.whatsappGroupLink = "WhatsApp group link is required.";
 
     setFormError(errors);
     return Object.keys(errors).length === 0;
@@ -290,6 +308,7 @@ const AdminPanel = () => {
           isPaid: formData.isPaid,
           entryFee: formData.entryFee,
           imageUrl: formData.imageUrl,
+          whatsappGroupLink: formData.whatsappGroupLink,
         });
       } else {
         const newTournamentRef = doc(collection(firestore, 'tournaments'));
@@ -306,6 +325,7 @@ const AdminPanel = () => {
           isPaid: formData.isPaid,
           entryFee: formData.entryFee,
           imageUrl: formData.imageUrl,
+          whatsappGroupLink: formData.whatsappGroupLink,
         });
       }
 
@@ -325,6 +345,7 @@ const AdminPanel = () => {
         entryFee: '',
         image: null,
         imageUrl: '',
+        whatsappGroupLink: '',
       });
       setIsModalOpen(false);
     } catch (error) {
@@ -347,6 +368,7 @@ const AdminPanel = () => {
       isPaid: tournament.isPaid,
       entryFee: tournament.entryFee,
       imageUrl: tournament.imageUrl,
+      whatsappGroupLink: tournament.whatsappGroupLink,
     });
     setIsModalOpen(true);
   };
