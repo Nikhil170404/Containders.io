@@ -220,6 +220,25 @@ const TournamentList = ({ tournaments, handleEdit, handleDelete, openParticipant
   </div>
 );
 
+// Participant Details Modal Component
+const ParticipantDetailsModal = ({ participant, isOpen, onClose, onDeclareWinner }) => (
+  <Modal isOpen={isOpen} onRequestClose={onClose} className="participant-modal" overlayClassName="participant-modal-overlay">
+    <h2>Participant Details</h2>
+    {participant ? ( // Check if participant is not null
+      <>
+        <p>Username: {participant.gameUsername}</p>
+        <p>User ID: {participant.userId}</p>
+        <Button variant="contained" color="primary" onClick={() => onDeclareWinner(participant)}>
+          Declare Winner
+        </Button>
+      </>
+    ) : (
+      <p>No participant selected.</p> // Fallback message
+    )}
+    <Button variant="outlined" color="secondary" onClick={onClose}>Close</Button>
+  </Modal>
+);
+
 const AdminPanel = () => {
   const [tournaments, setTournaments] = useState([]);
   const [formData, setFormData] = useState({
@@ -242,6 +261,8 @@ const AdminPanel = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formError, setFormError] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [isParticipantModalOpen, setIsParticipantModalOpen] = useState(false);
+  const [selectedParticipant, setSelectedParticipant] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(firestore, 'tournaments'), (snapshot) => {
@@ -398,6 +419,31 @@ const AdminPanel = () => {
 
   const openParticipantsModal = (tournament) => {
     // Open participants modal logic here
+    setIsParticipantModalOpen(true);
+    setSelectedParticipant(tournament.participants[0]); // Assuming the first participant is selected
+  };
+
+  const closeParticipantModal = () => {
+    setIsParticipantModalOpen(false);
+    setSelectedParticipant(null);
+  };
+
+  const handleDeclareWinner = async (participant) => {
+    try {
+      // Update the winner's wallet balance
+      const userDoc = doc(firestore, 'users', participant.userId);
+      await updateDoc(userDoc, {
+        walletBalance: participant.walletBalance + parseInt(formData.prizePool),
+      });
+
+      // Close the modal
+      closeParticipantModal();
+
+      // Show success message
+      setSuccessMessage(`${participant.gameUsername} has been declared the winner and their wallet balance has been updated!`);
+    } catch (error) {
+      console.error('Error declaring winner:', error);
+    }
   };
 
   return (
@@ -432,6 +478,12 @@ const AdminPanel = () => {
           closeModal={() => setIsModalOpen(false)}
         />
       </Modal>
+      <ParticipantDetailsModal
+        participant={selectedParticipant}
+        isOpen={isParticipantModalOpen}
+        onClose={closeParticipantModal}
+        onDeclareWinner={handleDeclareWinner}
+      />
     </div>
   );
 };
