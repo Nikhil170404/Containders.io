@@ -1,2 +1,0 @@
-"use strict";(self.webpackChunkcontainders=self.webpackChunkcontainders||[]).push([[381],{7381:(s,a,e)=>{e.r(a),e.d(a,{default:()=>l});e(5043);var c=e(579);const l=s=>{let{src:a,alt:e,className:l}=s;return(0,c.jsx)("img",{src:a,alt:e,className:l,loading:"lazy"})}}}]);
-//# sourceMappingURL=381.81f3475c.chunk.js.map

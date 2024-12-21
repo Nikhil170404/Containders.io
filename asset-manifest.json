@@ -1,16 +1,13 @@
 {
   "files": {
-    "main.css": "/Containders.io/static/css/main.03cda7b4.css",
-    "main.js": "/Containders.io/static/js/main.51d5eb44.js",
-    "static/js/381.81f3475c.chunk.js": "/Containders.io/static/js/381.81f3475c.chunk.js",
-    "static/media/background.jpg": "/Containders.io/static/media/background.212107a03df69f288da0.jpg",
+    "main.css": "/Containders.io/static/css/main.cbe3edd2.css",
+    "main.js": "/Containders.io/static/js/main.84013fdb.js",
     "index.html": "/Containders.io/index.html",
-    "main.03cda7b4.css.map": "/Containders.io/static/css/main.03cda7b4.css.map",
-    "main.51d5eb44.js.map": "/Containders.io/static/js/main.51d5eb44.js.map",
-    "381.81f3475c.chunk.js.map": "/Containders.io/static/js/381.81f3475c.chunk.js.map"
+    "main.cbe3edd2.css.map": "/Containders.io/static/css/main.cbe3edd2.css.map",
+    "main.84013fdb.js.map": "/Containders.io/static/js/main.84013fdb.js.map"
   },
   "entrypoints": [
-    "static/css/main.03cda7b4.css",
-    "static/js/main.51d5eb44.js"
+    "static/css/main.cbe3edd2.css",
+    "static/js/main.84013fdb.js"
   ]
 }
