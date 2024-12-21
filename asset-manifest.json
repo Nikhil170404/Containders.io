@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/Containders.io/static/css/main.cbe3edd2.css",
-    "main.js": "/Containders.io/static/js/main.ce57212d.js",
+    "main.js": "/Containders.io/static/js/main.c43a342d.js",
     "index.html": "/Containders.io/index.html",
     "main.cbe3edd2.css.map": "/Containders.io/static/css/main.cbe3edd2.css.map",
-    "main.ce57212d.js.map": "/Containders.io/static/js/main.ce57212d.js.map"
+    "main.c43a342d.js.map": "/Containders.io/static/js/main.c43a342d.js.map"
   },
   "entrypoints": [
     "static/css/main.cbe3edd2.css",
-    "static/js/main.ce57212d.js"
+    "static/js/main.c43a342d.js"
   ]
 }
