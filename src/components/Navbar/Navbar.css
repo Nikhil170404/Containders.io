@@ -1,6 +1,8 @@
 /* General Styles */
 .navbar {
-  background-color: #1a1a1a;
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   padding: 0.5rem 1rem;
   display: flex;
   justify-content: space-between;
@@ -9,6 +11,11 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   position: relative;
   transition: background-color 0.3s ease;
+}
+
+.navbar a {
+  text-decoration: none;
+  color: inherit;
 }
 
 /* Hamburger Menu Styles */
@@ -141,6 +148,136 @@
   margin-left: 0.75rem;
 }
 
+/* Hover effect for buttons */
+.MuiButton-root:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Active link styles */
+.MuiButton-root.active {
+  background-color: rgba(33, 150, 243, 0.08);
+  color: #2196f3;
+}
+
+/* Drawer styles */
+.MuiDrawer-paper {
+  background-color: #ffffff;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* List item hover effect */
+.MuiListItem-root:hover {
+  background-color: rgba(33, 150, 243, 0.08);
+}
+
+/* Avatar styles */
+.MuiAvatar-root {
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.MuiAvatar-root:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px currentColor;
+}
+
+/* Menu styles */
+.MuiMenu-paper {
+  margin-top: 8px;
+  min-width: 200px;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  animation: menuFade 0.2s ease;
+}
+
+.MuiMenuItem-root {
+  padding: 12px 16px !important;
+  transition: background-color 0.3s ease, padding-left 0.3s ease;
+}
+
+.MuiMenuItem-root:hover {
+  padding-left: 24px;
+  background-color: rgba(124, 77, 255, 0.08) !important;
+}
+
+/* Toolbar spacing */
+.MuiToolbar-root {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+@media (min-width: 600px) {
+  .MuiToolbar-root {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+}
+
+/* Logo styles */
+.navbar-logo {
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: -0.5px;
+  transition: transform 0.3s ease;
+}
+
+.navbar-logo:hover {
+  transform: scale(1.05);
+}
+
+/* Button group spacing */
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+/* Mobile menu icon */
+.menu-icon {
+  padding: 8px;
+}
+
+/* Dropdown menu animation */
+@keyframes menuFade {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Active route indicator */
+.active-route {
+  position: relative;
+}
+
+.active-route::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #2196f3;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.active-route:hover::after {
+  transform: scaleX(1);
+}
+
 /* Styles for different devices */
 @media (max-width: 768px) {
   .navbar-toggle {
@@ -177,6 +314,7 @@
 .logout-btn:hover {
   background-color: #c0392b;
 }
+
 /* Dropdown Container */
 .dropdown {
   position: relative;
@@ -245,4 +383,76 @@
 
 .sidebar-item.dropdown .sidebar-link {
   padding-right: 2rem; /* Adjust padding for dropdown item */
+}
+
+/* Button hover animations */
+.MuiButton-root {
+  position: relative;
+  overflow: hidden;
+}
+
+.MuiButton-root::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
+}
+
+.MuiButton-root:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* Icon animations */
+.MuiSvgIcon-root {
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.MuiSvgIcon-root:hover {
+  transform: scale(1.2);
+  color: #7c4dff;
+}
+
+.navbar-logo:hover .MuiSvgIcon-root {
+  transform: scale(1.2);
+  color: #7c4dff;
+}
+
+/* Navbar blur effect */
+.MuiAppBar-root {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+  .MuiAppBar-root {
+    background: rgba(26, 26, 26, 0.9) !important;
+  }
+
+  .MuiButton-root {
+    color: #ffffff;
+  }
+
+  .MuiMenuItem-root:hover {
+    background-color: rgba(124, 77, 255, 0.15) !important;
+  }
+}
+
+/* Responsive styles */
+@media (max-width: 600px) {
+  .MuiToolbar-root {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .navbar-logo .MuiTypography-root {
+    font-size: 1.25rem;
+  }
 }

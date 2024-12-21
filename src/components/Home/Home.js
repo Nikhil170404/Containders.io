@@ -1,219 +1,243 @@
 import React, { useEffect, useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { fetchTournaments } from '../../redux/actions/tournamentActions';
-import { purchaseTournament } from '../../redux/actions/authAction';
-import TournamentCard from './TournamentCard';
-import Loader from '../Loader/Loader';
-import './Home.css';
-import { FaSearch, FaSort, FaTrashAlt, FaBell } from 'react-icons/fa';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { useSelector } from 'react-redux';
+import {
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  Box,
+  Card,
+  CardContent,
+  CardMedia,
+  Button,
+  CircularProgress,
+  Chip,
+} from '@mui/material';
+import {
+  SportsEsports,
+  EmojiEvents,
+  Group,
+  TrendingUp,
+} from '@mui/icons-material';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { firestore } from '../../firebase';
 
 const Home = () => {
-  const dispatch = useDispatch();
-  const { isLoading } = useSelector((state) => state.tournament);
-  const { purchasedTournaments = [] } = useSelector((state) => state.auth) || {};
-
-  const [sortOption, setSortOption] = useState('title');
-  const [filterText, setFilterText] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [favorites, setFavorites] = useState([]);
-  const [realTimeTournaments, setRealTimeTournaments] = useState([]);
-  const [filterType, setFilterType] = useState('all');
-  const [showNotifications, setShowNotifications] = useState(false);
-
-  const tournamentsPerPage = 10;
+  const { user } = useSelector((state) => state.auth);
+  const [games, setGames] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const tournamentsCollection = collection(firestore, 'tournaments');
-    const unsubscribe = onSnapshot(tournamentsCollection, (snapshot) => {
-      const tournamentsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setRealTimeTournaments(tournamentsData);
-    });
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // Fetch games
+        const gamesQuery = query(
+          collection(firestore, 'games'),
+          orderBy('createdAt', 'desc'),
+          limit(3)
+        );
+        const gamesSnapshot = await getDocs(gamesQuery);
+        const gamesData = gamesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setGames(gamesData);
 
-    return () => unsubscribe();
+        // Fetch tournaments
+        const tournamentsQuery = query(
+          collection(firestore, 'tournaments'),
+          where('status', '==', 'upcoming'),
+          limit(3)
+        );
+        const tournamentsSnapshot = await getDocs(tournamentsQuery);
+        const tournamentsData = tournamentsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setTournaments(tournamentsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    dispatch(fetchTournaments());
-  }, [dispatch]);
-
-  const handlePurchase = (tournamentName) => {
-    dispatch(purchaseTournament(tournamentName));
-  };
-
-  const handleFavorite = (tournamentName) => {
-    setFavorites((prevFavorites) =>
-      prevFavorites.includes(tournamentName)
-        ? prevFavorites.filter((fav) => fav !== tournamentName)
-        : [...prevFavorites, tournamentName]
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="80vh"
+      >
+        <CircularProgress />
+      </Box>
     );
-  };
-
-  const sortTournaments = (tournaments, option) => {
-    return tournaments.slice().sort((a, b) => {
-      switch (option) {
-        case 'title':
-          return (a.title || '').localeCompare(b.title || '');
-        case 'participants':
-          return (b.participants || 0) - (a.participants || 0);
-        case 'entryFee':
-          return (a.entryFee || 0) - (b.entryFee || 0);
-        case 'prizeMoney':
-          return (b.prizeMoney || 0) - (a.prizeMoney || 0);
-        case 'date':
-          return new Date(a.date) - new Date(b.date);
-        case 'popularity':
-          return (b.participants || 0) - (a.participants || 0);
-        default:
-          return 0;
-      }
-    });
-  };
-
-  const filterTournaments = (tournaments, text, type) => {
-    const lowercasedText = text.toLowerCase();
-    return tournaments.filter(
-      (tournament) =>
-        (tournament.title && tournament.title.toLowerCase().includes(lowercasedText)) ||
-        (tournament.description && tournament.description.toLowerCase().includes(lowercasedText)) ||
-        (type === 'all' || tournament.tournamentType === type)
-    );
-  };
-
-  const handleClearFilters = () => {
-    setFilterText('');
-    setSortOption('title');
-    setFilterType('all');
-  };
-
-  const toggleNotifications = () => {
-    setShowNotifications(!showNotifications);
-  };
-
-  const sortedTournaments = sortTournaments(realTimeTournaments || [], sortOption);
-  const filteredTournaments = filterTournaments(sortedTournaments || [], filterText, filterType);
-
-  // Remove duplicate tournaments
-  const uniqueTournaments = Array.from(new Set(filteredTournaments.map(t => t.id)))
-    .map(id => {
-      return filteredTournaments.find(tournament => tournament.id === id);
-    });
-
-  // Pagination logic
-  const indexOfLastTournament = currentPage * tournamentsPerPage;
-  const indexOfFirstTournament = indexOfLastTournament - tournamentsPerPage;
-  const currentTournaments = uniqueTournaments.slice(indexOfFirstTournament, indexOfLastTournament);
-  const totalPages = Math.ceil(uniqueTournaments.length / tournamentsPerPage);
-
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
+  }
 
   return (
-    <div className="home-container">
-      {isLoading ? (
-        <Loader />
-      ) : (
-        <>
-          <header className="home-header">
-            <h1>🎮 Welcome to the Esports Platform!</h1>
-            <p>Compete in exciting tournaments and win amazing prizes! 💰</p>
-          </header>
-          <section className="filters-section">
-            <div className="filter-group">
-              <FaSearch className="icon" />
-              <input
-                type="text"
-                placeholder="Search tournaments..."
-                value={filterText}
-                onChange={(e) => setFilterText(e.target.value)}
-                className="filter-input"
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      {/* Welcome Section */}
+      <Box mb={4}>
+        <Typography variant="h4" gutterBottom>
+          Welcome back, {user.displayName}!
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Stay updated with the latest games and tournaments.
+        </Typography>
+      </Box>
+
+      {/* Stats Section */}
+      <Grid container spacing={3} mb={4}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            sx={{
+              p: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              bgcolor: 'primary.light',
+              color: 'white',
+            }}
+          >
+            <SportsEsports sx={{ fontSize: 40, mb: 1 }} />
+            <Typography variant="h6">Available Games</Typography>
+            <Typography variant="h4">{games.length}</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            sx={{
+              p: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              bgcolor: 'secondary.light',
+              color: 'white',
+            }}
+          >
+            <EmojiEvents sx={{ fontSize: 40, mb: 1 }} />
+            <Typography variant="h6">Active Tournaments</Typography>
+            <Typography variant="h4">{tournaments.length}</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            sx={{
+              p: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              bgcolor: 'success.light',
+              color: 'white',
+            }}
+          >
+            <Group sx={{ fontSize: 40, mb: 1 }} />
+            <Typography variant="h6">Your Teams</Typography>
+            <Typography variant="h4">0</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            sx={{
+              p: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              bgcolor: 'warning.light',
+              color: 'white',
+            }}
+          >
+            <TrendingUp sx={{ fontSize: 40, mb: 1 }} />
+            <Typography variant="h6">Your Rank</Typography>
+            <Typography variant="h4">N/A</Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Featured Games */}
+      <Typography variant="h5" gutterBottom mb={2}>
+        Featured Games
+      </Typography>
+      <Grid container spacing={3} mb={4}>
+        {games.map((game) => (
+          <Grid item xs={12} sm={6} md={4} key={game.id}>
+            <Card>
+              <CardMedia
+                component="img"
+                height="140"
+                image={game.imageUrl || '/game-placeholder.jpg'}
+                alt={game.title}
               />
-            </div>
-            <div className="filter-group">
-              <FaSort className="icon" />
-              <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-                className="sort-select"
-              >
-                <option value="title">Title</option>
-                <option value="participants">Participants</option>
-                <option value="entryFee">Entry Fee</option>
-                <option value="prizeMoney">Prize Money</option>
-                <option value="date">Date</option>
-                <option value="popularity">Popularity</option>
-              </select>
-            </div>
-            <div className="filter-group">
-              <label>Type:</label>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="type-select"
-              >
-                <option value="all">All</option>
-                <option value="solo">Solo</option>
-                <option value="duo">Duo</option>
-                <option value="squad">Squad</option>
-              </select>
-            </div>
-            <button onClick={handleClearFilters} className="clear-filters-btn">
-              <FaTrashAlt className="icon" />
-              Clear Filters
-            </button>
-            <button onClick={toggleNotifications} className="notifications-btn">
-              <FaBell className={`icon ${showNotifications ? 'active' : ''}`} />
-              {showNotifications ? 'Hide' : 'Show'} Notifications
-            </button>
-          </section>
-          <section className="featured-tournaments">
-            <h2>🏆 Featured Tournaments:</h2>
-            <div className="tournament-list">
-              {currentTournaments.map((tournament) => (
-                <TournamentCard
-                  key={tournament.id}
-                  {...tournament}
-                  onPurchase={handlePurchase}
-                  onFavorite={handleFavorite}
-                  isFavorite={favorites.includes(tournament.title)}
-                  isPurchased={purchasedTournaments.includes(tournament.title)}
-                />
-              ))}
-            </div>
-          </section>
-          <div className="pagination">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              className="page-btn"
-              disabled={currentPage === 1}
-            >
-              Previous
-            </button>
-            {[...Array(totalPages).keys()].map((number) => (
-              <button
-                key={number + 1}
-                onClick={() => handlePageChange(number + 1)}
-                className={`page-btn ${currentPage === number + 1 ? 'active' : ''}`}
-              >
-                {number + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              className="page-btn"
-              disabled={currentPage === totalPages}
-            >
-              Next
-            </button>
-          </div>
-        </>
-      )}
-    </div>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {game.title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" noWrap>
+                  {game.description}
+                </Typography>
+                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip
+                    size="small"
+                    label={game.category}
+                    color="primary"
+                  />
+                  <Box sx={{ flexGrow: 1 }} />
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => {/* TODO: Implement game details/join */}}
+                  >
+                    Play Now
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Upcoming Tournaments */}
+      <Typography variant="h5" gutterBottom mb={2}>
+        Upcoming Tournaments
+      </Typography>
+      <Grid container spacing={3}>
+        {tournaments.map((tournament) => (
+          <Grid item xs={12} sm={6} md={4} key={tournament.id}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {tournament.name}
+                </Typography>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Game: {tournament.game}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Prize Pool: ${tournament.prizePool}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Start Date: {new Date(tournament.startDate).toLocaleDateString()}
+                  </Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={() => {/* TODO: Implement tournament registration */}}
+                >
+                  Register Now
+                </Button>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
   );
 };
 

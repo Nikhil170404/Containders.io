@@ -1,133 +1,486 @@
-import React, { useState, useEffect } from 'react';
-import { collection, getDocs, updateDoc, doc, getDoc } from 'firebase/firestore'; // Import getDoc here
-import { firestore } from '../../firebase';
-import './AdminTransaction.css';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  useTheme,
+  useMediaQuery,
+  Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Card,
+  CardContent,
+  Box,
+  Chip,
+  TablePagination,
+} from '@mui/material';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { db, collection, query, where, getDocs, orderBy } from '../../firebase';
+import { Line, Bar } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const AdminTransaction = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // eslint-disable-next-line no-unused-vars
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+
   const [transactions, setTransactions] = useState([]);
-  const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [showDetails, setShowDetails] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(isMobile ? 5 : 10);
+  const [filters, setFilters] = useState({
+    startDate: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    status: 'all',
+    type: 'all',
+  });
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalTransactions: 0,
+    avgTransactionValue: 0,
+    pendingAmount: 0,
+  });
 
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const transactionsCollection = collection(firestore, 'pendingTransactions');
-        const transactionDocs = await getDocs(transactionsCollection);
-        let allTransactions = [];
-
-        transactionDocs.forEach((txnDoc) => {
-          const txnData = txnDoc.data();
-          allTransactions.push({
-            id: txnDoc.id,
-            ...txnData
-          });
-        });
-
-        setTransactions(allTransactions);
-        setFilteredTransactions(allTransactions);
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTransactions();
-  }, []);
-
-  const handleStatusChange = async (transactionId, newStatus) => {
+  const fetchTransactions = useCallback(async () => {
+    setLoading(true);
     try {
-      const pendingTransactionDoc = doc(firestore, 'pendingTransactions', transactionId);
-      const txnData = (await getDoc(pendingTransactionDoc)).data();
-      const walletRef = doc(firestore, 'users', txnData.userId);
+      const startDateTime = new Date(filters.startDate);
+      const endDateTime = new Date(filters.endDate);
+      endDateTime.setHours(23, 59, 59, 999);
 
-      if (newStatus === 'completed' && txnData.type === 'Deposit') {
-        await updateDoc(walletRef, {
-          balance: firestore.FieldValue.increment(txnData.amount)
-        });
-      } else if (newStatus === 'completed' && txnData.type === 'Withdrawal') {
-        await updateDoc(walletRef, {
-          balance: firestore.FieldValue.increment(-txnData.amount)
-        });
-      }
+      let q = query(
+        collection(db, 'transactions'),
+        where('date', '>=', startDateTime),
+        where('date', '<=', endDateTime),
+        orderBy('date', 'desc')
+      );
 
-      await updateDoc(pendingTransactionDoc, { status: newStatus });
-      setTransactions(prevTransactions => prevTransactions.filter(txn => txn.id !== transactionId));
-      setFilteredTransactions(prevFiltered => prevFiltered.filter(txn => txn.id !== transactionId));
+      const querySnapshot = await getDocs(q);
+      let allTransactions = [];
+      let totalRevenue = 0;
+      let pendingAmount = 0;
+
+      querySnapshot.forEach((doc) => {
+        const transaction = { id: doc.id, ...doc.data() };
+        
+        if (
+          (filters.status === 'all' || transaction.status === filters.status) &&
+          (filters.type === 'all' || transaction.type === filters.type)
+        ) {
+          allTransactions.push(transaction);
+          if (transaction.status === 'completed') {
+            totalRevenue += transaction.amount;
+          } else if (transaction.status === 'pending') {
+            pendingAmount += transaction.amount;
+          }
+        }
+      });
+
+      setStats({
+        totalRevenue,
+        totalTransactions: allTransactions.length,
+        avgTransactionValue: totalRevenue / allTransactions.length || 0,
+        pendingAmount,
+      });
+
+      setTransactions(allTransactions);
     } catch (error) {
-      console.error('Error updating transaction status:', error);
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  const chartData = useMemo(() => {
+    const dailyRevenue = {};
+    const dailyTransactions = {};
+
+    transactions.forEach((transaction) => {
+      const date = new Date(transaction.date.toDate()).toISOString().split('T')[0];
+      if (transaction.status === 'completed') {
+        dailyRevenue[date] = (dailyRevenue[date] || 0) + transaction.amount;
+        dailyTransactions[date] = (dailyTransactions[date] || 0) + 1;
+      }
+    });
+
+    const labels = Object.keys(dailyRevenue).sort();
+
+    return {
+      revenue: {
+        labels,
+        datasets: [
+          {
+            label: 'Daily Revenue',
+            data: labels.map(date => dailyRevenue[date]),
+            borderColor: theme.palette.primary.main,
+            backgroundColor: theme.palette.primary.light,
+            tension: 0.4,
+            fill: true,
+          },
+        ],
+      },
+      transactions: {
+        labels,
+        datasets: [
+          {
+            label: 'Daily Transactions',
+            data: labels.map(date => dailyTransactions[date]),
+            backgroundColor: theme.palette.secondary.main,
+            borderColor: theme.palette.secondary.dark,
+            borderWidth: 1,
+          },
+        ],
+      },
+    };
+  }, [transactions, theme.palette]);
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: isMobile ? 'bottom' : 'top',
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: (value) => `₹${value}`,
+        },
+      },
+    },
+    interaction: {
+      mode: 'nearest',
+      axis: 'x',
+      intersect: false,
+    },
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'success';
+      case 'pending': return 'warning';
+      case 'failed': return 'error';
+      default: return 'default';
     }
   };
 
-  const handleFilterChange = (e) => {
-    setFilterStatus(e.target.value);
-    if (e.target.value === 'all') {
-      setFilteredTransactions(transactions);
-    } else {
-      setFilteredTransactions(transactions.filter(txn => txn.status === e.target.value));
-    }
-  };
+  const renderStatCard = (title, value, isAmount = true) => (
+    <Grid item xs={12} sm={6} md={3}>
+      <Card 
+        elevation={3}
+        sx={{
+          height: '100%',
+          transition: 'transform 0.2s',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+          },
+        }}
+      >
+        <CardContent>
+          <Typography color="textSecondary" gutterBottom variant="subtitle2">
+            {title}
+          </Typography>
+          {loading ? (
+            <Skeleton variant="text" width="80%" height={40} />
+          ) : (
+            <Typography variant="h5" component="div">
+              {isAmount ? `₹${value.toFixed(2)}` : value}
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
+    </Grid>
+  );
 
-  const handleTransactionClick = (transaction) => {
-    setSelectedTransaction(transaction);
-    setShowDetails(true);
-  };
-
-  const closeDetails = () => {
-    setShowDetails(false);
-    setSelectedTransaction(null);
-  };
+  const renderMobileTableRow = (transaction) => (
+    <TableRow key={transaction.id}>
+      <TableCell>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Typography variant="subtitle2">
+            {new Date(transaction.date.toDate()).toLocaleDateString()}
+          </Typography>
+          <Chip
+            label={transaction.type}
+            size="small"
+            color="primary"
+            variant="outlined"
+            sx={{ alignSelf: 'flex-start' }}
+          />
+          <Typography variant="h6">₹{transaction.amount}</Typography>
+          <Chip
+            label={transaction.status}
+            size="small"
+            color={getStatusColor(transaction.status)}
+            sx={{ alignSelf: 'flex-start' }}
+          />
+          <Typography variant="caption" color="textSecondary">
+            {transaction.userId}
+          </Typography>
+        </Box>
+      </TableCell>
+    </TableRow>
+  );
 
   return (
-    <div className="admin-panel">
-      <h1>Admin Transaction Panel</h1>
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <div>
-          <div className="filter-container">
-            <label htmlFor="status-filter">Filter by Status:</label>
-            <select id="status-filter" value={filterStatus} onChange={handleFilterChange}>
-              <option value="all">All</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Grid container spacing={3}>
+        {/* Statistics Cards */}
+        <Grid item xs={12}>
+          <Grid container spacing={2}>
+            {renderStatCard('Total Revenue', stats.totalRevenue)}
+            {renderStatCard('Total Transactions', stats.totalTransactions, false)}
+            {renderStatCard('Average Value', stats.avgTransactionValue)}
+            {renderStatCard('Pending Amount', stats.pendingAmount)}
+          </Grid>
+        </Grid>
 
-          <div className="transaction-list">
-            <h2>All Transactions</h2>
-            <ul>
-              {filteredTransactions.map((txn) => (
-                <li key={txn.id} className="transaction-item" onClick={() => handleTransactionClick(txn)}>
-                  <p><strong>ID:</strong> {txn.id}</p>
-                  <p><strong>Username:</strong> {txn.username}</p>
-                  <p><strong>Amount:</strong> ₹{txn.amount}</p>
-                  <p><strong>Status:</strong> {txn.status}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
+        {/* Filters */}
+        <Grid item xs={12}>
+          <Paper 
+            elevation={3}
+            sx={{ 
+              p: 2,
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+              },
+            }}
+          >
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Start Date
+                </Typography>
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="subtitle2" gutterBottom>
+                  End Date
+                </Typography>
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Status
+                </Typography>
+                <select
+                  fullWidth
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                >
+                  <option value="all">All</option>
+                  <option value="completed">Completed</option>
+                  <option value="pending">Pending</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Type
+                </Typography>
+                <select
+                  fullWidth
+                  value={filters.type}
+                  onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                >
+                  <option value="all">All</option>
+                  <option value="deposit">Deposit</option>
+                  <option value="withdrawal">Withdrawal</option>
+                  <option value="tournament_fee">Tournament Fee</option>
+                  <option value="prize">Prize Money</option>
+                </select>
+              </Grid>
+            </Grid>
+          </Paper>
+        </Grid>
 
-      {showDetails && selectedTransaction && (
-        <div className="transaction-details">
-          <h2>Transaction Details</h2>
-          <p><strong>ID:</strong> {selectedTransaction.id}</p>
-          <p><strong>Type:</strong> {selectedTransaction.type}</p>
-          <p><strong>Amount:</strong> ₹{selectedTransaction.amount}</p>
-          <p><strong>Status:</strong> {selectedTransaction.status}</p>
-          <p><strong>Transaction ID:</strong> {selectedTransaction.transactionId}</p>
-          <button onClick={() => handleStatusChange(selectedTransaction.id, 'completed')}>Approve</button>
-          <button onClick={() => handleStatusChange(selectedTransaction.id, 'rejected')}>Reject</button>
-          <button onClick={closeDetails}>Close</button>
-        </div>
-      )}
-    </div>
+        {/* Charts */}
+        <Grid item xs={12} md={6}>
+          <Paper 
+            elevation={3}
+            sx={{ 
+              p: 2,
+              height: isMobile ? 300 : 400,
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+              },
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              Revenue Trend
+            </Typography>
+            {loading ? (
+              <Skeleton variant="rectangular" width="100%" height="100%" />
+            ) : (
+              <Line data={chartData.revenue} options={chartOptions} />
+            )}
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Paper 
+            elevation={3}
+            sx={{ 
+              p: 2,
+              height: isMobile ? 300 : 400,
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+              },
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              Transaction Volume
+            </Typography>
+            {loading ? (
+              <Skeleton variant="rectangular" width="100%" height="100%" />
+            ) : (
+              <Bar data={chartData.transactions} options={chartOptions} />
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Transactions Table */}
+        <Grid item xs={12}>
+          <Paper 
+            elevation={3}
+            sx={{ 
+              width: '100%',
+              mb: 2,
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+              },
+            }}
+          >
+            <TableContainer>
+              <Table>
+                {!isMobile && (
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>Details</TableCell>
+                    </TableRow>
+                  </TableHead>
+                )}
+                <TableBody>
+                  {loading ? (
+                    Array.from({ length: rowsPerPage }).map((_, index) => (
+                      <TableRow key={index}>
+                        <TableCell colSpan={isMobile ? 1 : 6}>
+                          <Skeleton variant="rectangular" height={isMobile ? 120 : 40} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    transactions
+                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                      .map((transaction) => (
+                        isMobile ? (
+                          renderMobileTableRow(transaction)
+                        ) : (
+                          <TableRow key={transaction.id}>
+                            <TableCell>
+                              {new Date(transaction.date.toDate()).toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={transaction.type}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                              />
+                            </TableCell>
+                            <TableCell>₹{transaction.amount}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={transaction.status}
+                                size="small"
+                                color={getStatusColor(transaction.status)}
+                              />
+                            </TableCell>
+                            <TableCell>{transaction.userId}</TableCell>
+                            <TableCell>{transaction.details}</TableCell>
+                          </TableRow>
+                        )
+                      ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              rowsPerPageOptions={isMobile ? [5, 10] : [5, 10, 25]}
+              component="div"
+              count={transactions.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </Paper>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 

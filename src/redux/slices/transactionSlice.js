@@ -1,12 +1,11 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { firestore } from '../../firebase';
-import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db, collection, getDocs, doc, getDoc, updateDoc } from '../../firebase';
 
 // Thunks
 export const fetchWalletsThunk = createAsyncThunk(
   'transactions/fetchWallets',
   async () => {
-    const walletsRef = collection(firestore, 'wallets');
+    const walletsRef = collection(db, 'wallets');
     const snapshot = await getDocs(walletsRef);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
@@ -15,7 +14,7 @@ export const fetchWalletsThunk = createAsyncThunk(
 export const addMoneyThunk = createAsyncThunk(
   'transactions/addMoney',
   async ({ userId, amount }) => {
-    const walletRef = doc(firestore, 'wallets', userId);
+    const walletRef = doc(db, 'wallets', userId);
     const walletSnap = await getDoc(walletRef);
 
     if (!walletSnap.exists()) {

@@ -1,176 +1,277 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { updateUser, checkUsernameAvailability } from '../../redux/actions/authAction';
-import { fetchWallet } from '../../redux/actions/walletAction';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { firestore, storage } from '../../firebase';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import './Profile.css';
+import React, { useState, useEffect } from 'react';
+import {
+  Container,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Grid,
+  Box,
+  Snackbar,
+  Alert,
+  Card,
+  CardContent,
+  CircularProgress,
+} from '@mui/material';
+import { useSelector } from 'react-redux';
+import { db, doc, updateDoc, onSnapshot, setDoc } from '../../firebase';
 
 const Profile = () => {
   const { user } = useSelector((state) => state.auth);
-  const { balance } = useSelector((state) => state.wallet);
-  const dispatch = useDispatch();
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    age: user?.age || '',
-    bio: user?.bio || '',
-    profileImage: user?.profileImage || '',
-    gameUids: user?.gameUids || {},
-    username: user?.username || ''
+  const [profile, setProfile] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    gameIds: {
+      bgmi: '',
+      freeFire: '',
+      codm: '',
+      valorant: '',
+    },
   });
-  const [file, setFile] = useState(null);
-  const [usernameError, setUsernameError] = useState('');
-
-  const fetchUserProfile = useCallback(() => {
-    if (user?.uid) {
-      const unsubscribe = onSnapshot(doc(firestore, 'users', user.uid), (doc) => {
-        setFormData((prev) => ({ ...prev, ...doc.data() }));
-      });
-      dispatch(fetchWallet());
-      return unsubscribe;
-    }
-  }, [user?.uid, dispatch]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   useEffect(() => {
-    const unsubscribe = fetchUserProfile();
-    return () => unsubscribe && unsubscribe();
-  }, [fetchUserProfile]);
+    if (!user?.uid) return;
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
+    setLoading(true);
+    // Set up real-time listener for profile changes
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', user.uid),
+      (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          setProfile({
+            name: data.name || '',
+            email: data.email || user.email || '',
+            phone: data.phone || '',
+            gameIds: {
+              bgmi: data.gameIds?.bgmi || '',
+              freeFire: data.gameIds?.freeFire || '',
+              codm: data.gameIds?.codm || '',
+              valorant: data.gameIds?.valorant || '',
+            },
+          });
+        } else {
+          // Create initial profile if it doesn't exist
+          const initialProfile = {
+            email: user.email,
+            createdAt: new Date(),
+            gameIds: {
+              bgmi: '',
+              freeFire: '',
+              codm: '',
+              valorant: '',
+            },
+          };
+          setDoc(doc(db, 'users', user.uid), initialProfile);
+          setProfile({
+            ...initialProfile,
+            name: '',
+            phone: '',
+          });
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching profile:', error);
+        setSnackbar({
+          open: true,
+          message: 'Error loading profile',
+          severity: 'error',
+        });
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const handleInputChange = (field) => (event) => {
+    setProfile((prev) => ({
       ...prev,
-      [name]: value
+      [field]: event.target.value,
     }));
   };
 
-  const handleGameUidChange = (e, game) => {
-    const { value } = e.target;
-    setFormData((prev) => ({
+  const handleGameIdChange = (game) => (event) => {
+    setProfile((prev) => ({
       ...prev,
-      gameUids: { ...prev.gameUids, [game]: value }
+      gameIds: {
+        ...prev.gameIds,
+        [game]: event.target.value,
+      },
     }));
   };
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const handleSave = async () => {
-    if (!formData.username) {
-      setUsernameError('Username is required');
-      return;
-    }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
 
     try {
-      // Only check for username uniqueness if the username is being changed
-      if (formData.username !== user.username) {
-        const isUsernameAvailable = await dispatch(checkUsernameAvailability(formData.username));
-        if (!isUsernameAvailable) {
-          setUsernameError('Username is already taken');
-          return;
-        }
-      }
+      const userRef = doc(db, 'users', user.uid);
+      const updates = {
+        name: profile.name,
+        phone: profile.phone,
+        gameIds: {
+          bgmi: profile.gameIds.bgmi,
+          freeFire: profile.gameIds.freeFire,
+          codm: profile.gameIds.codm,
+          valorant: profile.gameIds.valorant,
+        },
+        updatedAt: new Date(),
+      };
+      
+      await updateDoc(userRef, updates);
 
-      let profileImageUrl = formData.profileImage;
-
-      if (file) {
-        try {
-          if (profileImageUrl) {
-            const oldImageRef = ref(storage, profileImageUrl);
-            await deleteObject(oldImageRef);
-          }
-          const fileRef = ref(storage, `profile-images/${user.uid}/${file.name}`);
-          await uploadBytes(fileRef, file);
-          profileImageUrl = await getDownloadURL(fileRef);
-        } catch (error) {
-          console.error("Error handling profile image: ", error);
-        }
-      }
-
-      if (user?.uid) {
-        dispatch(updateUser(user.uid, { ...formData, profileImage: profileImageUrl }));
-        setIsEditing(false);
-      } else {
-        console.error("User ID is missing, cannot update profile");
-      }
+      setSnackbar({
+        open: true,
+        message: 'Profile updated successfully',
+        severity: 'success',
+      });
     } catch (error) {
-      setUsernameError(error.message);
+      console.error('Error updating profile:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error updating profile',
+        severity: 'error',
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (!user) return <p>Please log in to view your profile.</p>;
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <div className="profile-container">
-      <h2>{formData.name}'s Profile</h2>
-      <img src={formData.profileImage || 'default-profile.png'} alt="Profile" className="profile-image" />
-      {isEditing ? (
-        <div className="profile-edit-form">
-          {['name', 'email', 'age', 'bio'].map((field) => (
-            <div key={field}>
-              <label>{field.charAt(0).toUpperCase() + field.slice(1)}:</label>
-              <input
-                type={field === 'age' ? 'number' : 'text'}
-                name={field}
-                value={formData[field]}
-                onChange={handleChange}
-                disabled={field === 'email'}
+    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Profile Settings
+        </Typography>
+        <form onSubmit={handleSubmit}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Name"
+                value={profile.name}
+                onChange={handleInputChange('name')}
+                required
+                helperText="Enter your full name"
               />
-            </div>
-          ))}
-          <div>
-            <label>Username:</label>
-            <input
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              disabled={!!user?.username} // Disable editing if username is already set
-            />
-            {usernameError && <p className="error-text">{usernameError}</p>}
-          </div>
-          {Object.keys(formData.gameUids).map((game) => (
-            <div key={game}>
-              <label>{game} UID:</label>
-              <input
-                type="text"
-                value={formData.gameUids[game]}
-                onChange={(e) => handleGameUidChange(e, game)}
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Email"
+                value={profile.email}
+                disabled
+                helperText="Email cannot be changed"
               />
-            </div>
-          ))}
-          <label>Add Game UID:</label>
-          <input
-            type="text"
-            placeholder="Game Name"
-            onBlur={(e) => handleGameUidChange({ target: { value: '' } }, e.target.value)}
-          />
-          <label>Profile Image:</label>
-          <input type="file" accept="image/*" onChange={handleFileChange} />
-          <div className="profile-edit-actions">
-            <button onClick={handleSave}>Save Changes</button>
-            <button onClick={() => setIsEditing(false)}>Cancel</button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <p><strong>Email:</strong> {formData.email}</p>
-          <p><strong>Age:</strong> {formData.age}</p>
-          <p><strong>Bio:</strong> {formData.bio}</p>
-          <p><strong>Username:</strong> {formData.username}</p>
-          {Object.keys(formData.gameUids).map((game) => (
-            <p key={game}><strong>{game} UID:</strong> {formData.gameUids[game]}</p>
-          ))}
-          <p><strong>Wallet Balance:</strong> ₹{balance || 0}</p>
-          <button className="edit-button" onClick={() => setIsEditing(true)}>Edit Profile</button>
-        </>
-      )}
-    </div>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Phone"
+                value={profile.phone}
+                onChange={handleInputChange('phone')}
+                helperText="Enter your contact number"
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                Game IDs
+              </Typography>
+              <Card>
+                <CardContent>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="BGMI ID"
+                        value={profile.gameIds.bgmi}
+                        onChange={handleGameIdChange('bgmi')}
+                        helperText="Enter your BGMI player ID"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Free Fire ID"
+                        value={profile.gameIds.freeFire}
+                        onChange={handleGameIdChange('freeFire')}
+                        helperText="Enter your Free Fire player ID"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="COD Mobile ID"
+                        value={profile.gameIds.codm}
+                        onChange={handleGameIdChange('codm')}
+                        helperText="Enter your COD Mobile player ID"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Valorant ID"
+                        value={profile.gameIds.valorant}
+                        onChange={handleGameIdChange('valorant')}
+                        helperText="Enter your Valorant player ID"
+                      />
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  disabled={saving}
+                  fullWidth
+                  size="large"
+                >
+                  {saving ? 'Saving...' : 'Save Profile'}
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </form>
+      </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 };
 

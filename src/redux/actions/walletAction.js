@@ -1,5 +1,4 @@
-import { doc, getDoc, updateDoc } from 'firebase/firestore'; // Ensure updateDoc is imported
-import { firestore } from '../../firebase';
+import { db, doc, getDoc, updateDoc } from '../../firebase';
 
 // Action types
 export const FETCH_WALLET_REQUEST = 'FETCH_WALLET_REQUEST';
@@ -16,7 +15,7 @@ export const fetchWallet = () => async (dispatch, getState) => {
     const user = getState().auth.user;
     if (!user) throw new Error('User not logged in');
 
-    const walletRef = doc(firestore, 'wallets', user.uid);
+    const walletRef = doc(db, 'wallets', user.uid);
     const walletDoc = await getDoc(walletRef);
 
     if (walletDoc.exists()) {
@@ -45,7 +44,7 @@ export const updateWallet = (newBalance) => async (dispatch, getState) => {
     const user = getState().auth.user;
     if (!user) throw new Error('User not logged in');
 
-    const walletRef = doc(firestore, 'wallets', user.uid);
+    const walletRef = doc(db, 'wallets', user.uid);
 
     await updateDoc(walletRef, {
       balance: newBalance,

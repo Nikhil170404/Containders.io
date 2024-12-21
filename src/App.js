@@ -1,131 +1,105 @@
 import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { setUser } from './redux/actions/authAction';
+import { useDispatch, useSelector } from 'react-redux';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import theme from './theme/theme';
+
+// Components
 import Navbar from './components/Navbar/Navbar';
 import LandingPage from './components/LandingPage/LandingPage';
-import Home from './components/Home/Home';
-import Signup from './components/Auth/Signup';
 import Login from './components/Auth/Login';
+import Register from './components/Auth/Register';
 import Profile from './components/Profile/Profile';
-import Admin from './components/Admin/Admin';
-import AdminTransactions from './components/Admin/AdminTransaction';
-import AboutUs from './components/AboutUs/AboutUs';
-import ContactUs from './components/ContactUs/ContactUs';
-import Leaderboard from './components/Leaderboard/Leaderboard';
-import Settings from './components/Settings/Settings';
-import Community from './components/Community/Community';
+import AdminDashboard from './components/Admin/AdminDashboard';
+import TournamentManagement from './components/Admin/TournamentManagement';
+import GameManagement from './components/Admin/GameManagement';
+import UserManagement from './components/Admin/UserManagement';
+import AdminTransaction from './components/Admin/AdminTransaction';
+import UserHome from './components/User/UserHome';
+import Tournaments from './components/Tournaments/Tournaments';
+import Teams from './components/Teams/Teams';
+import Players from './components/Players/Players';
+import NotFound from './components/NotFound/NotFound';
+import AdminWalletRequests from './components/Admin/AdminWalletRequests';
 import Wallet from './components/Wallet/Wallet';
-import PostAchievement from './components/PostAchievement/PostAchievement';
-import GroupManagement from './components/GroupManagement/GroupManagement';
-import Events from './components/Events/Events';
-import EventDetail from './components/Events/EventDetail';
-import CreateEvent from './components/Events/CreateEvent';
-import EditEvent from './components/Events/EditEvent';
-import ChatInterface from './components/Chat/ChatInterface';
-import './index.css';
+import { setUserFromLocalStorage } from './redux/actions/authAction';
 
-const App = () => {
-  const dispatch = useDispatch();
+// Protected Route for authenticated users
+const PrivateRoute = ({ children }) => {
   const { user } = useSelector((state) => state.auth);
+  if (!user) return <Navigate to="/login" />;
+  return children;
+};
+
+// Admin Route - only accessible by admins
+const AdminRoute = ({ children }) => {
+  const { user } = useSelector((state) => state.auth);
+  if (!user) return <Navigate to="/login" />;
+  if (!user.isAdmin) return <Navigate to="/home" />;
+  return children;
+};
+
+// User Route - only accessible by regular users
+const UserRoute = ({ children }) => {
+  const { user } = useSelector((state) => state.auth);
+  if (!user) return <Navigate to="/login" />;
+  if (user.isAdmin) return <Navigate to="/admin" />;
+  return children;
+};
+
+// Public Route - redirects authenticated users based on their role
+const PublicRoute = ({ children }) => {
+  const { user } = useSelector((state) => state.auth);
+  if (user) {
+    if (user.isAdmin) {
+      return <Navigate to="/admin" />;
+    }
+    return <Navigate to="/home" />;
+  }
+  return children;
+};
+
+function App() {
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      dispatch(setUser(parsedUser));
-    }
+    dispatch(setUserFromLocalStorage());
   }, [dispatch]);
 
-  const determineRedirectPath = () => {
-    if (user) {
-      return user.isAdmin ? '/admin' : '/home';
-    }
-    return '/';
-  };
-
   return (
-    <Router>
-      <Navbar />
-      <div className="container">
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Router>
+        <Navbar />
         <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route
-            path="/home"
-            element={user ? (user.isAdmin ? <Navigate to="/admin" /> : <Home />) : <Navigate to="/" />}
-          />
-          <Route
-            path="/signup"
-            element={!user ? <Signup /> : <Navigate to={determineRedirectPath()} />}
-          />
-          <Route
-            path="/login"
-            element={!user ? <Login /> : <Navigate to={determineRedirectPath()} />}
-          />
-          <Route
-            path="/profile"
-            element={user ? <Profile /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/admin"
-            element={user && user.isAdmin ? <Admin /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/admin/transactions"
-            element={user && user.isAdmin ? <AdminTransactions /> : <Navigate to="/login" />}
-          />
-          <Route path="/aboutus" element={<AboutUs />} />
-          <Route path="/contactus" element={<ContactUs />} />
-         
-          <Route
-            path="/leaderboard"
-            element={user ? <Leaderboard /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/settings"
-            element={user ? <Settings /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/wallet"
-            element={user ? <Wallet /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/community"
-            element={user ? <Community /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/postachievement"
-            element={user ? <PostAchievement /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/groupmanagement"
-            element={user ? <GroupManagement /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/events"
-            element={user ? <Events /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/events/:id"
-            element={user && user.isAdmin ? <EventDetail /> : <Navigate to="/events" />}
-          />
-          <Route
-            path="/create-event"
-            element={user && user.isAdmin ? <CreateEvent /> : <Navigate to="/events" />}
-          />
-          <Route
-            path="/edit-event/:id"
-            element={user && user.isAdmin ? <EditEvent /> : <Navigate to="/events" />}
-          />
-          <Route
-            path="/chat"
-            element={user ? <ChatInterface /> : <Navigate to="/login" />}
-          />
-          <Route path="*" element={<Navigate to="/" />} />
+          {/* Public Routes */}
+          <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/admin/tournaments" element={<AdminRoute><TournamentManagement /></AdminRoute>} />
+          <Route path="/admin/games" element={<AdminRoute><GameManagement /></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+          <Route path="/admin/transactions" element={<AdminRoute><AdminTransaction /></AdminRoute>} />
+          <Route path="/admin/wallet-requests" element={<AdminRoute><AdminWalletRequests /></AdminRoute>} />
+
+          {/* User Routes */}
+          <Route path="/home" element={<UserRoute><UserHome /></UserRoute>} />
+          <Route path="/tournaments" element={<PrivateRoute><Tournaments /></PrivateRoute>} />
+          <Route path="/teams" element={<PrivateRoute><Teams /></PrivateRoute>} />
+          <Route path="/players" element={<PrivateRoute><Players /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/wallet" element={<PrivateRoute><Wallet /></PrivateRoute>} />
+
+          {/* 404 Route */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
-      </div>
-    </Router>
+      </Router>
+    </ThemeProvider>
   );
-};
+}
 
 export default App;

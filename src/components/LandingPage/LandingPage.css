@@ -10,6 +10,7 @@ body {
 .landing-page {
   color: #333;
   overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* Hero Section */
@@ -72,6 +73,19 @@ body {
   transform: scale(1.05);
 }
 
+/* Hero Section Animation */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
 /* Info Section */
 .info-section {
   display: flex;
@@ -113,6 +127,12 @@ body {
   margin-bottom: 10px;
 }
 
+/* Feature Card Hover Effect */
+.feature-card {
+  cursor: pointer;
+  background: linear-gradient(145deg, #ffffff, #f5f5f5);
+}
+
 /* Game of the Week Section */
 .game-of-the-week {
   background-color: #fff;
@@ -152,6 +172,22 @@ body {
 
 .game-info .cta-button {
   margin-top: 1rem;
+}
+
+/* Stats Animation */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stat-number {
+  animation: countUp 1s ease-out forwards;
 }
 
 /* Newsletter Section */
@@ -203,6 +239,15 @@ body {
   background-color: #0056b3;
 }
 
+/* Gradient Text Effect */
+.gradient-text {
+  background: linear-gradient(45deg, #2196f3, #ff4081);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
 /* Testimonials Section */
 .testimonials {
   background-color: #f8f9fa;
@@ -223,6 +268,47 @@ body {
 .testimonial-card h4 {
   margin-top: 15px;
   font-weight: bold;
+}
+
+/* Responsive Background Patterns */
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 20%),
+    radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 20%);
+  pointer-events: none;
+}
+
+/* Card Hover Effects */
+.feature-card:hover::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #2196f3, #ff4081);
+  border-radius: 13px;
+  z-index: -1;
+  opacity: 0;
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* Footer */
@@ -256,7 +342,7 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Media Queries for Responsive Design */
+/* Responsive Design */
 @media (max-width: 768px) {
   .hero-section h1 {
     font-size: 2.5rem;
@@ -287,4 +373,73 @@ body {
   .testimonial-card {
     width: 90%;
   }
+}
+
+@media (max-width: 960px) {
+  .hero-section {
+    text-align: center;
+  }
+  
+  .hero-section .MuiGrid-container {
+    flex-direction: column-reverse;
+  }
+}
+
+@media (max-width: 600px) {
+  .feature-card {
+    margin: 0 16px;
+  }
+  
+  .stat-number {
+    font-size: 2rem !important;
+  }
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Loading Skeleton Animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, 
+    #f0f0f0 25%, 
+    #e0e0e0 50%, 
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Button Hover Effects */
+.MuiButton-contained:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }

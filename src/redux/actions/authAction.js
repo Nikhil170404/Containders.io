@@ -1,116 +1,235 @@
-import { auth, firestore } from '../../firebase';
-import { 
-  signInWithEmailAndPassword, 
-  signOut, 
-  createUserWithEmailAndPassword, 
-  updateProfile 
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth';
-import { setDoc, doc, updateDoc, getDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import {
+  auth,
+  db,
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  getDoc,
+  query,
+  where,
+  updateDoc
+} from '../../firebase';
 
-// Admin UID
-const ADMIN_UID = 'r7yLC41g4tMQqUCd5y4Rjls6Pch2';
+// Action Types
+export const REGISTER_REQUEST = 'REGISTER_REQUEST';
+export const REGISTER_SUCCESS = 'REGISTER_SUCCESS';
+export const REGISTER_FAIL = 'REGISTER_FAIL';
+export const LOGIN_REQUEST = 'LOGIN_REQUEST';
+export const LOGIN_SUCCESS = 'LOGIN_SUCCESS';
+export const LOGIN_FAIL = 'LOGIN_FAIL';
+export const LOGOUT = 'LOGOUT';
+export const SET_USER = 'SET_USER';
+export const UPDATE_PROFILE = 'UPDATE_PROFILE';
 
-// Action for user login
-export const login = (email, password) => async (dispatch) => {
-  dispatch({ type: 'LOGIN_REQUEST' }); 
+const ADMIN_EMAIL = 'admin@esports.com';
+
+// Register user
+export const register = (email, password, username) => async (dispatch) => {
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    const isAdmin = user.uid === ADMIN_UID;
+    dispatch({ type: REGISTER_REQUEST });
 
-    const userPurchasesRef = doc(firestore, 'userPurchases', user.uid);
-    const userPurchasesDoc = await getDoc(userPurchasesRef);
+    // Create user in Firebase Auth
+    const { user } = await createUserWithEmailAndPassword(auth, email, password);
 
-    let purchasedGames = [];
-    if (userPurchasesDoc.exists()) {
-      purchasedGames = userPurchasesDoc.data().purchases || [];
-    } else {
-      await setDoc(userPurchasesRef, { purchases: [] });
-    }
-
-    const userData = { ...user, isAdmin };
-    dispatch({ type: 'LOGIN_SUCCESS', payload: { user: userData, purchasedGames } });
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('lastActivity', new Date().toString());
-  } catch (error) {
-    dispatch({ type: 'LOGIN_FAILURE', payload: error.message });
-    console.error('Login failed:', error.message);
-  }
-};
-
-// Action for user signup
-export const signup = (userData) => async (dispatch) => {
-  dispatch({ type: 'SIGNUP_REQUEST' });
-  try {
-    const { email, password, name, age, bio = '', username = '' } = userData;
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
-    const isAdmin = user.uid === ADMIN_UID;
-
-    await setDoc(doc(firestore, 'users', user.uid), {
-      uid: user.uid,
-      email: user.email,
-      name,
-      age,
-      bio,
-      username,
-      isAdmin
+    // Update profile with username
+    await updateProfile(user, {
+      displayName: username,
     });
 
-    await setDoc(doc(firestore, 'userPurchases', user.uid), { purchases: [] });
+    // Create user document in Firestore
+    const userData = {
+      uid: user.uid,
+      email: user.email,
+      username: username,
+      displayName: username,
+      role: email === ADMIN_EMAIL ? 'admin' : 'user',
+      isAdmin: email === ADMIN_EMAIL,
+      createdAt: new Date().toISOString(),
+      photoURL: null,
+      active: true,
+    };
 
-    const userDataWithInfo = { ...user, name, age, bio, username, isAdmin };
+    await setDoc(doc(db, 'users', user.uid), userData);
 
-    dispatch({ type: 'SIGNUP_SUCCESS', payload: userDataWithInfo });
+    // Update auth state
+    dispatch({
+      type: REGISTER_SUCCESS,
+      payload: userData,
+    });
 
-    localStorage.setItem('user', JSON.stringify(userDataWithInfo));
-    localStorage.setItem('lastActivity', new Date().toString());
+    // Store user data in localStorage
+    localStorage.setItem('user', JSON.stringify(userData));
+
+    return userData;
   } catch (error) {
-    dispatch({ type: 'SIGNUP_FAILURE', payload: error.message });
-    console.error('Signup failed:', error.message);
-  }
-};
-
-// Action for user logout
-export const logout = () => async (dispatch) => {
-  dispatch({ type: 'LOGOUT_REQUEST' });
-  try {
-    await signOut(auth);
-    dispatch({ type: 'LOGOUT_SUCCESS' });
-    localStorage.removeItem('user');
-    localStorage.removeItem('lastActivity');
-  } catch (error) {
-    dispatch({ type: 'LOGOUT_FAILURE', payload: error.message });
-    console.error('Logout failed:', error.message);
-  }
-};
-
-// Action for updating user profile
-export const updateUser = (uid, userData) => async (dispatch) => {
-  dispatch({ type: 'UPDATE_USER_REQUEST' });
-  try {
-    const { name, age, bio = '', profileImage, gameUids = [], username = '' } = userData;
-
-    const user = auth.currentUser;
-    if (user) {
-      await updateProfile(user, { displayName: name, photoURL: profileImage });
+    let errorMessage = 'Registration failed. Please try again.';
+    
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+        errorMessage = 'This email is already registered.';
+        break;
+      case 'auth/invalid-email':
+        errorMessage = 'Invalid email address.';
+        break;
+      case 'auth/weak-password':
+        errorMessage = 'Password should be at least 6 characters.';
+        break;
+      default:
+        errorMessage = error.message;
     }
 
-    const userRef = doc(firestore, 'users', uid);
-    await updateDoc(userRef, { name, age, bio, profileImage, gameUids, username });
-
-    dispatch({ type: 'UPDATE_USER_SUCCESS', payload: { uid, name, age, bio, profileImage, gameUids, username } });
-  } catch (error) {
-    dispatch({ type: 'UPDATE_USER_FAILURE', payload: error.message });
-    console.error('Profile update failed:', error.message);
+    dispatch({
+      type: REGISTER_FAIL,
+      payload: errorMessage,
+    });
+    throw new Error(errorMessage);
   }
 };
 
-// Action to set user from local storage
+// Login user
+export const login = (email, password) => async (dispatch) => {
+  try {
+    dispatch({ type: LOGIN_REQUEST });
+
+    // Sign in with Firebase Auth
+    const { user } = await signInWithEmailAndPassword(auth, email, password);
+
+    // Get additional user data from Firestore
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    const userData = userDoc.data() || {};
+
+    // Check if user is admin
+    const isAdmin = email === ADMIN_EMAIL;
+
+    const userWithRole = {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      isAdmin,
+      ...userData,
+    };
+
+    // Store user data in localStorage
+    localStorage.setItem('user', JSON.stringify(userWithRole));
+
+    dispatch({
+      type: LOGIN_SUCCESS,
+      payload: userWithRole,
+    });
+
+  } catch (error) {
+    dispatch({
+      type: LOGIN_FAIL,
+      payload: error.message,
+    });
+    throw error;
+  }
+};
+
+// Logout user
+export const logout = () => async (dispatch) => {
+  try {
+    await signOut(auth);
+    localStorage.removeItem('user');
+    dispatch({ type: LOGOUT });
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
+};
+
+// Set user
 export const setUser = (user) => ({
-  type: 'SET_USER',
+  type: SET_USER,
   payload: user,
 });
+
+// Update user profile
+export const updateUserProfile = (userData) => ({
+  type: UPDATE_PROFILE,
+  payload: userData,
+});
+
+// Google Sign In
+export const signInWithGoogle = () => async (dispatch) => {
+  try {
+    dispatch({ type: LOGIN_REQUEST });
+
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    
+    const { user } = await signInWithPopup(auth, provider);
+
+    // Create/update user profile in Firestore
+    const userRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userRef);
+    const userData = userDoc.data();
+
+    if (!userData) {
+      const userData = {
+        uid: user.uid,
+        email: user.email,
+        username: user.email.split('@')[0],
+        displayName: user.displayName,
+        role: 'user',
+        isAdmin: false,
+        createdAt: new Date().toISOString(),
+        photoURL: user.photoURL,
+        active: true,
+      };
+
+      await setDoc(userRef, userData);
+    }
+
+    dispatch({
+      type: LOGIN_SUCCESS,
+      payload: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        role: userData?.role || 'user',
+        ...userData,
+      },
+    });
+
+    return user;
+  } catch (error) {
+    dispatch({
+      type: LOGIN_FAIL,
+      payload: error.message,
+    });
+    throw error;
+  }
+};
+
+// Check username availability
+export const checkUsernameAvailability = async (username) => {
+  if (!username || username.length < 3) {
+    throw new Error('Username must be at least 3 characters long');
+  }
+
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username', '==', username.toLowerCase()));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.empty;
+  } catch (error) {
+    console.error('Error checking username:', error);
+    throw new Error('Error checking username availability');
+  }
+};
 
 // Action to purchase a game
 export const purchaseGame = (gameName) => async (dispatch, getState) => {
@@ -121,7 +240,7 @@ export const purchaseGame = (gameName) => async (dispatch, getState) => {
 
     if (!user) throw new Error('User not logged in');
 
-    const userPurchasesRef = doc(firestore, 'userPurchases', user.uid);
+    const userPurchasesRef = doc(db, 'userPurchases', user.uid);
     const userPurchasesDoc = await getDoc(userPurchasesRef);
     const currentPurchases = userPurchasesDoc.exists() ? userPurchasesDoc.data().purchases || [] : [];
 
@@ -144,7 +263,7 @@ export const purchaseGame = (gameName) => async (dispatch, getState) => {
 
 // Function to update game participants
 const updateGameParticipants = async (gameName) => {
-  const gameRef = doc(firestore, 'games', gameName);
+  const gameRef = doc(db, 'games', gameName);
   const gameDoc = await getDoc(gameRef);
   
   if (gameDoc.exists()) {
@@ -179,21 +298,15 @@ export const purchaseTournament = (tournamentId) => async (dispatch, getState) =
   }
 };
 
-// Action to check username availability
-export const checkUsernameAvailability = (username) => async () => {
-  try {
-    const q = query(collection(firestore, 'users'), where('username', '==', username));
-    const querySnapshot = await getDocs(q);
-
-    if (!querySnapshot.empty) {
-      // Username already exists
-      return false;
-    } else {
-      // Username is available
-      return true;
-    }
-  } catch (error) {
-    console.error('Error checking username availability:', error.message);
-    return false;
+// Set user from localStorage
+export const setUserFromLocalStorage = () => (dispatch) => {
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (user) {
+    // Ensure isAdmin is set correctly
+    user.isAdmin = user.email === ADMIN_EMAIL;
+    dispatch({
+      type: SET_USER,
+      payload: user,
+    });
   }
 };
