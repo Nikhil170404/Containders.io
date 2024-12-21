@@ -155,11 +155,7 @@ const Login = () => {
             {loading ? <CircularProgress size={24} /> : 'Sign In'}
           </Button>
 
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              Admin Login: admin@esports.com / Admin@123
-            </Typography>
-          </Box>
+          
 
           <Box sx={{ mt: 3, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">

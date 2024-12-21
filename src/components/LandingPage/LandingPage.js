@@ -224,7 +224,7 @@ const LandingPage = () => {
                 }
               }}
             >
-              Rise to Glory in Esports
+              Rise UnderDog
             </Typography>
             <Typography 
               variant={isMobile ? "h6" : "h5"} 
@@ -234,7 +234,7 @@ const LandingPage = () => {
                 px: 2
               }}
             >
-              Join the ultimate gaming platform for competitive players and teams
+              Where Underdogs Become Champions
             </Typography>
             <Box sx={{ 
               display: 'flex', 
