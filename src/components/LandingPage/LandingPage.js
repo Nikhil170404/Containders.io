@@ -1,17 +1,51 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Container, Typography, useTheme, useMediaQuery } from '@mui/material';
+import { useSelector } from 'react-redux';
+import { 
+  Box, 
+  Button, 
+  Container, 
+  Typography, 
+  useTheme, 
+  useMediaQuery, 
+  Grid,
+  Card,
+  CardContent,
+  Paper,
+  AppBar,
+  Toolbar
+} from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { PlayCircleOutline, EmojiEvents, People, SportsEsports } from '@mui/icons-material';
+import { 
+  PlayCircleOutline, 
+  EmojiEvents, 
+  People, 
+  SportsEsports,
+  Security,
+  Timeline,
+  MonetizationOn,
+  GroupAdd,
+  Gamepad,
+  EmojiPeople,
+  Login
+} from '@mui/icons-material';
 
 const HeroSection = styled(Box)(({ theme }) => ({
-  minHeight: '100vh',
+  minHeight: '90vh',
   background: 'linear-gradient(135deg, #1a237e 0%, #4a148c 100%)',
   display: 'flex',
   alignItems: 'center',
   position: 'relative',
   overflow: 'hidden',
   padding: theme.spacing(4, 0),
+  [theme.breakpoints.down('md')]: {
+    padding: theme.spacing(3, 0),
+    minHeight: '85vh',
+  },
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2, 0),
+    minHeight: '80vh',
+  },
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -24,18 +58,22 @@ const HeroSection = styled(Box)(({ theme }) => ({
   },
 }));
 
-const FeatureCard = styled(Box)(({ theme }) => ({
+const FeatureCard = styled(Card)(({ theme }) => ({
   background: 'rgba(255, 255, 255, 0.1)',
   borderRadius: theme.spacing(2),
-  padding: theme.spacing(3),
+  height: '100%',
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
-  textAlign: 'center',
   transition: 'transform 0.3s ease-in-out',
   '&:hover': {
     transform: 'translateY(-10px)',
     background: 'rgba(255, 255, 255, 0.15)',
+  },
+  [theme.breakpoints.down('md')]: {
+    marginBottom: theme.spacing(1.5),
+  },
+  [theme.breakpoints.down('sm')]: {
+    marginBottom: theme.spacing(2),
   },
 }));
 
@@ -46,6 +84,11 @@ const ActionButton = styled(Button)(({ theme }) => ({
   borderRadius: theme.spacing(3),
   textTransform: 'none',
   fontSize: '1.1rem',
+  [theme.breakpoints.down('sm')]: {
+    width: '100%',
+    marginRight: 0,
+    marginBottom: theme.spacing(2),
+  },
   '&.primary': {
     background: 'linear-gradient(45deg, #ff4081 30%, #ff6b9b 90%)',
     color: 'white',
@@ -63,129 +106,288 @@ const ActionButton = styled(Button)(({ theme }) => ({
   },
 }));
 
+const StatsCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  textAlign: 'center',
+  background: 'rgba(255, 255, 255, 0.1)',
+  color: 'white',
+  borderRadius: theme.spacing(2),
+  [theme.breakpoints.down('sm')]: {
+    marginBottom: theme.spacing(2),
+  },
+}));
+
+const ResponsiveAppBar = styled(AppBar)(({ theme }) => ({
+  background: 'transparent',
+  boxShadow: 'none',
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  zIndex: 10,
+}));
+
 const features = [
   {
     icon: <SportsEsports sx={{ fontSize: 40, mb: 2, color: '#ff4081' }} />,
     title: 'Competitive Gaming',
-    description: 'Join tournaments across multiple game titles and compete with players worldwide',
+    description: 'Join tournaments across multiple game titles and compete with players worldwide. Experience thrilling matches and showcase your skills.',
   },
   {
     icon: <EmojiEvents sx={{ fontSize: 40, mb: 2, color: '#ff4081' }} />,
     title: 'Win Prizes',
-    description: 'Compete for cash prizes, gaming gear, and exclusive rewards',
+    description: 'Compete for substantial cash prizes, premium gaming gear, and exclusive rewards. Every tournament offers exciting opportunities.',
   },
   {
     icon: <People sx={{ fontSize: 40, mb: 2, color: '#ff4081' }} />,
     title: 'Community',
-    description: 'Connect with fellow gamers, form teams, and build your network',
+    description: 'Connect with fellow gamers, form teams, and build your network. Join a thriving community of passionate players.',
+  },
+  {
+    icon: <Security sx={{ fontSize: 40, mb: 2, color: '#ff4081' }} />,
+    title: 'Secure Platform',
+    description: 'Play on a secure platform with anti-cheat measures and fair play policies. Your gaming experience is our priority.',
+  },
+  {
+    icon: <Timeline sx={{ fontSize: 40, mb: 2, color: '#ff4081' }} />,
+    title: 'Track Progress',
+    description: 'Monitor your performance with detailed statistics, rankings, and achievement tracking. Watch yourself improve over time.',
+  },
+  {
+    icon: <MonetizationOn sx={{ fontSize: 40, mb: 2, color: '#ff4081' }} />,
+    title: 'Easy Payments',
+    description: 'Seamless transaction system for tournament entries and prize distributions. Quick and secure payment processing.',
+  },
+];
+
+const howItWorks = [
+  {
+    icon: <GroupAdd sx={{ fontSize: 40, mb: 2, color: '#ff4081' }} />,
+    title: '1. Create Account',
+    description: 'Sign up and complete your gaming profile with your achievements and preferences.',
+  },
+  {
+    icon: <Gamepad sx={{ fontSize: 40, mb: 2, color: '#ff4081' }} />,
+    title: '2. Join Tournaments',
+    description: 'Browse available tournaments and register for the ones that match your skill level.',
+  },
+  {
+    icon: <EmojiPeople sx={{ fontSize: 40, mb: 2, color: '#ff4081' }} />,
+    title: '3. Compete & Win',
+    description: 'Participate in matches, climb the leaderboard, and win exciting prizes.',
   },
 ];
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const matches = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const user = useSelector(state => state.auth.user);
 
   return (
-    <HeroSection>
-      <Container maxWidth="lg">
-        <Box
-          sx={{
-            pt: matches ? 8 : 12,
-            pb: matches ? 6 : 8,
-            textAlign: 'center',
-            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-            color: 'white',
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              color: 'white',
-              position: 'relative',
-              zIndex: 1,
-            }}
-          >
-            <Typography
-              variant="h1"
-              sx={{
-                fontSize: { xs: '2.5rem', sm: '3rem', md: '4rem' },
-                fontWeight: 700,
-                marginBottom: 2,
-                background: 'linear-gradient(45deg, #ff4081 30%, #ff6b9b 90%)',
-                backgroundClip: 'text',
-                textFillColor: 'transparent',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+    <Box sx={{ background: 'linear-gradient(135deg, #1a237e 0%, #4a148c 100%)' }}>
+      {/* Navigation Bar for Non-logged Users */}
+      {!user && (
+        <ResponsiveAppBar>
+          <Toolbar sx={{ justifyContent: 'flex-end' }}>
+            <Button
+              color="inherit"
+              startIcon={<Login />}
+              onClick={() => navigate('/login')}
+              sx={{ color: 'white' }}
+            >
+              Sign In
+            </Button>
+          </Toolbar>
+        </ResponsiveAppBar>
+      )}
+
+      {/* Hero Section */}
+      <HeroSection>
+        <Container maxWidth="lg">
+          <Box sx={{ 
+            textAlign: 'center', 
+            color: 'white', 
+            mb: 8,
+            pt: !user ? 8 : 0 // Add padding top if user is not logged in
+          }}>
+            <Typography 
+              variant={isMobile ? "h3" : "h2"} 
+              component="h1" 
+              sx={{ 
+                mb: 2, 
+                fontWeight: 'bold',
+                fontSize: {
+                  xs: '2rem',
+                  sm: '3rem',
+                  md: '3.75rem'
+                }
               }}
             >
-              Level Up Your Gaming
+              Rise to Glory in Esports
             </Typography>
-
-            <Typography
-              variant="h2"
-              sx={{
-                fontSize: { xs: '1.2rem', sm: '1.5rem', md: '1.8rem' },
-                fontWeight: 400,
+            <Typography 
+              variant={isMobile ? "h6" : "h5"} 
+              sx={{ 
+                mb: 4, 
                 opacity: 0.9,
-                maxWidth: '800px',
-                marginBottom: 4,
+                px: 2
               }}
             >
-              Join the ultimate esports platform where competitive gaming meets community.
-              Compete, win prizes, and become a legend.
+              Join the ultimate gaming platform for competitive players and teams
             </Typography>
-
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              justifyContent: 'center',
+              gap: 2
+            }}>
               <ActionButton
-                variant="contained"
                 className="primary"
                 onClick={() => navigate('/register')}
                 startIcon={<PlayCircleOutline />}
+                fullWidth={isMobile}
               >
                 Get Started
               </ActionButton>
               <ActionButton
-                variant="outlined"
                 className="secondary"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/tournaments')}
+                fullWidth={isMobile}
               >
-                Sign In
+                View Tournaments
               </ActionButton>
             </Box>
-
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: '1fr 1fr',
-                  md: '1fr 1fr 1fr',
-                },
-                gap: 4,
-                width: '100%',
-                mt: 8,
-              }}
-            >
-              {features.map((feature, index) => (
-                <FeatureCard key={index}>
-                  {feature.icon}
-                  <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
-                    {feature.title}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                    {feature.description}
-                  </Typography>
-                </FeatureCard>
-              ))}
-            </Box>
           </Box>
-        </Box>
-      </Container>
-    </HeroSection>
+
+          {/* Stats Section */}
+          <Grid container spacing={isMobile ? 2 : 4} sx={{ mb: 8 }}>
+            <Grid item xs={12} sm={4}>
+              <StatsCard>
+                <Typography variant={isMobile ? "h4" : "h3"} sx={{ mb: 1 }}>10K+</Typography>
+                <Typography>Active Players</Typography>
+              </StatsCard>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <StatsCard>
+                <Typography variant={isMobile ? "h4" : "h3"} sx={{ mb: 1 }}>₹100K+</Typography>
+                <Typography>Prize Pool</Typography>
+              </StatsCard>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <StatsCard>
+                <Typography variant={isMobile ? "h4" : "h3"} sx={{ mb: 1 }}>50+</Typography>
+                <Typography>Daily Tournaments</Typography>
+              </StatsCard>
+            </Grid>
+          </Grid>
+        </Container>
+      </HeroSection>
+
+      {/* Features Section */}
+      <Box sx={{ py: isMobile ? 4 : 8, background: 'rgba(0, 0, 0, 0.3)' }}>
+        <Container maxWidth="lg">
+          <Typography 
+            variant={isMobile ? "h4" : "h3"} 
+            component="h2" 
+            sx={{ 
+              mb: isMobile ? 4 : 6, 
+              color: 'white', 
+              textAlign: 'center' 
+            }}
+          >
+            Platform Features
+          </Typography>
+          <Grid container spacing={isMobile ? 2 : 4}>
+            {features.map((feature, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <FeatureCard>
+                  <CardContent sx={{ color: 'white', textAlign: 'center' }}>
+                    {feature.icon}
+                    <Typography variant={isMobile ? "h6" : "h5"} sx={{ mb: 2 }}>
+                      {feature.title}
+                    </Typography>
+                    <Typography variant={isMobile ? "body2" : "body1"}>
+                      {feature.description}
+                    </Typography>
+                  </CardContent>
+                </FeatureCard>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* How It Works Section */}
+      <Box sx={{ py: isMobile ? 4 : 8 }}>
+        <Container maxWidth="lg">
+          <Typography 
+            variant={isMobile ? "h4" : "h3"} 
+            component="h2" 
+            sx={{ 
+              mb: isMobile ? 4 : 6, 
+              color: 'white', 
+              textAlign: 'center' 
+            }}
+          >
+            How It Works
+          </Typography>
+          <Grid container spacing={isMobile ? 2 : 4}>
+            {howItWorks.map((step, index) => (
+              <Grid item xs={12} md={4} key={index}>
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  color: 'white',
+                  mb: isMobile ? 2 : 0
+                }}>
+                  {step.icon}
+                  <Typography variant={isMobile ? "h6" : "h5"} sx={{ mb: 2 }}>
+                    {step.title}
+                  </Typography>
+                  <Typography variant={isMobile ? "body2" : "body1"}>
+                    {step.description}
+                  </Typography>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Call to Action */}
+      <Box sx={{ 
+        py: isMobile ? 4 : 8, 
+        textAlign: 'center', 
+        background: 'rgba(0, 0, 0, 0.3)' 
+      }}>
+        <Container maxWidth="sm">
+          <Typography 
+            variant={isMobile ? "h5" : "h4"} 
+            sx={{ mb: 3, color: 'white' }}
+          >
+            Ready to Start Your Journey?
+          </Typography>
+          <Typography 
+            sx={{ 
+              mb: 4, 
+              color: 'white', 
+              opacity: 0.9,
+              px: isMobile ? 2 : 0
+            }}
+          >
+            Join thousands of players competing in tournaments and winning prizes daily.
+          </Typography>
+          <ActionButton
+            className="primary"
+            onClick={() => navigate('/register')}
+            size={isMobile ? "medium" : "large"}
+            fullWidth={isMobile}
+          >
+            Create Account Now
+          </ActionButton>
+        </Container>
+      </Box>
+    </Box>
   );
 };
 
