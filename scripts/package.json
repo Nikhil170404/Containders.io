@@ -1,0 +1,12 @@
+{
+  "name": "containders-scripts",
+  "version": "1.0.0",
+  "description": "Scripts for Containders.io",
+  "main": "setupAdmin.js",
+  "scripts": {
+    "setup-admin": "node setupAdmin.js"
+  },
+  "dependencies": {
+    "firebase": "^10.7.1"
+  }
+}
