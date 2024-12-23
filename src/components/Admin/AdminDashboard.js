@@ -15,18 +15,12 @@ import {
   SportsEsports as GameIcon,
   Person as UserIcon,
   AccountBalanceWallet as WalletIcon,
-<<<<<<< HEAD
   Assessment as AnalyticsIcon,
   Settings as SettingsIcon,
   Receipt as TransactionIcon,
 } from '@mui/icons-material';
 import { db, collection, getDocs } from '../../firebase';
 import AdminLayout from './AdminLayout';
-=======
-  AccountBalanceWallet,
-} from '@mui/icons-material';
-import { db, collection, getDocs } from '../../firebase';
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -65,7 +59,7 @@ const AdminDashboard = () => {
     navigate(path);
   };
 
-<<<<<<< HEAD
+
   const dashboardItems = [
     {
       title: 'Users',
@@ -184,8 +178,8 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
-=======
+
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
@@ -359,7 +353,7 @@ export default AdminDashboard;
       </Grid>
     </Container>
   );
-};
+
 
 export default AdminDashboard;
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
+
