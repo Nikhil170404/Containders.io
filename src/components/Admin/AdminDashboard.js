@@ -1,176 +1,154 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Grid,
   Typography,
+  Badge,
   Box,
   Card,
   CardContent,
-  CardActions,
-  Button,
 } from '@mui/material';
 import {
-  EmojiEvents as TournamentIcon,
-  SportsEsports as GameIcon,
-  Person as UserIcon,
   AccountBalanceWallet as WalletIcon,
-  Assessment as AnalyticsIcon,
-  Settings as SettingsIcon,
-  Receipt as TransactionIcon,
+  Person as UserIcon,
+  SportsEsports as GameIcon,
+  EmojiEvents as TournamentIcon,
 } from '@mui/icons-material';
-import { db, collection, getDocs } from '../../firebase';
+import { db, collection, query, where, onSnapshot } from '../../firebase';
+import { useNavigate } from 'react-router-dom';
+import NotificationComponent from '../Notifications/NotificationComponent';
 import AdminLayout from './AdminLayout';
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
   const [stats, setStats] = useState({
-    users: 0,
-    tournaments: 0,
-    games: 0,
-    transactions: 0,
+    pendingDeposits: 0,
+    pendingWithdrawals: 0,
+    totalUsers: 0,
+    activeGames: 0,
+    activeTournaments: 0,
   });
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [usersSnap, tournamentsSnap, gamesSnap, transactionsSnap] = await Promise.all([
-          getDocs(collection(db, 'users')),
-          getDocs(collection(db, 'tournaments')),
-          getDocs(collection(db, 'games')),
-          getDocs(collection(db, 'transactions')),
-        ]);
+    // Listen to deposit requests
+    const depositQuery = query(
+      collection(db, 'depositRequests'),
+      where('status', '==', 'pending')
+    );
+    const unsubscribeDeposits = onSnapshot(depositQuery, (snapshot) => {
+      setStats(prev => ({ ...prev, pendingDeposits: snapshot.size }));
+    });
 
-        setStats({
-          users: usersSnap.size,
-          tournaments: tournamentsSnap.size,
-          games: gamesSnap.size,
-          transactions: transactionsSnap.size,
-        });
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      }
+    // Listen to withdrawal requests
+    const withdrawalQuery = query(
+      collection(db, 'withdrawalRequests'),
+      where('status', '==', 'pending')
+    );
+    const unsubscribeWithdrawals = onSnapshot(withdrawalQuery, (snapshot) => {
+      setStats(prev => ({ ...prev, pendingWithdrawals: snapshot.size }));
+    });
+
+    // Listen to users
+    const usersQuery = query(collection(db, 'users'));
+    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+      setStats(prev => ({ ...prev, totalUsers: snapshot.size }));
+    });
+
+    // Listen to active games
+    const gamesQuery = query(
+      collection(db, 'games'),
+      where('status', '==', 'active')
+    );
+    const unsubscribeGames = onSnapshot(gamesQuery, (snapshot) => {
+      setStats(prev => ({ ...prev, activeGames: snapshot.size }));
+    });
+
+    // Listen to active tournaments
+    const tournamentsQuery = query(
+      collection(db, 'tournaments'),
+      where('status', '==', 'active')
+    );
+    const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
+      setStats(prev => ({ ...prev, activeTournaments: snapshot.size }));
+    });
+
+    return () => {
+      unsubscribeDeposits();
+      unsubscribeWithdrawals();
+      unsubscribeUsers();
+      unsubscribeGames();
+      unsubscribeTournaments();
     };
-
-    fetchStats();
   }, []);
 
-  const handleNavigate = (path) => {
-    navigate(path);
-  };
-
-  const dashboardItems = [
-    {
-      title: 'Users',
-      count: stats.users,
-      description: 'Manage user accounts and permissions',
-      icon: <UserIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
-      path: '/admin/users',
-      buttonText: 'Manage Users',
-    },
-    {
-      title: 'Tournaments',
-      count: stats.tournaments,
-      description: 'Manage tournaments and events',
-      icon: <TournamentIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
-      path: '/admin/tournaments',
-      buttonText: 'Manage Tournaments',
-    },
-    {
-      title: 'Games',
-      count: stats.games,
-      description: 'Manage games and categories',
-      icon: <GameIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
-      path: '/admin/games',
-      buttonText: 'Manage Games',
-    },
-    {
-      title: 'Transactions',
-      count: stats.transactions,
-      description: 'View and manage transactions',
-      icon: <TransactionIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
-      path: '/admin/transactions',
-      buttonText: 'View Transactions',
-    },
-    {
-      title: 'Wallet Requests',
-      count: '-',
-      description: 'Manage wallet requests',
-      icon: <WalletIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
-      path: '/admin/wallet-requests',
-      buttonText: 'View Requests',
-    },
-    {
-      title: 'Analytics',
-      count: '-',
-      description: 'View platform analytics',
-      icon: <AnalyticsIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
-      path: '/admin/analytics',
-      buttonText: 'View Analytics',
-    },
-    {
-      title: 'Settings',
-      count: '-',
-      description: 'Configure platform settings',
-      icon: <SettingsIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
-      path: '/admin/settings',
-      buttonText: 'Manage Settings',
-    },
-  ];
+  const StatCard = ({ title, value, icon: Icon, onClick, badge }) => (
+    <Card 
+      sx={{ 
+        cursor: onClick ? 'pointer' : 'default',
+        '&:hover': onClick ? { bgcolor: 'action.hover' } : {}
+      }}
+      onClick={onClick}
+    >
+      <CardContent>
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Box>
+            <Typography color="textSecondary" gutterBottom>
+              {title}
+            </Typography>
+            <Typography variant="h4">
+              {value}
+            </Typography>
+          </Box>
+          <Badge badgeContent={badge} color="error">
+            <Icon sx={{ fontSize: 40, color: 'primary.main' }} />
+          </Badge>
+        </Box>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <AdminLayout>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Admin Dashboard
-        </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+          <Typography variant="h4">Admin Dashboard</Typography>
+          <NotificationComponent />
+        </Box>
+        
         <Grid container spacing={3}>
-          {dashboardItems.map((item, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <Card
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'transform 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: (theme) => theme.shadows[4],
-                  },
-                }}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    {item.icon}
-                    <Typography variant="h5" sx={{ ml: 1 }}>
-                      {item.count}
-                    </Typography>
-                  </Box>
-                  <Typography variant="h6" gutterBottom>
-                    {item.title}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {item.description}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button
-                    size="small"
-                    onClick={() => handleNavigate(item.path)}
-                    sx={{
-                      color: 'primary.main',
-                      '&:hover': {
-                        backgroundColor: 'primary.main',
-                        color: 'white',
-                      },
-                    }}
-                  >
-                    {item.buttonText}
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
+          <Grid item xs={12} sm={6} md={4}>
+            <StatCard
+              title="Pending Wallet Requests"
+              value={stats.pendingDeposits + stats.pendingWithdrawals}
+              icon={WalletIcon}
+              onClick={() => navigate('/admin/wallet-requests')}
+              badge={stats.pendingDeposits + stats.pendingWithdrawals}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <StatCard
+              title="Total Users"
+              value={stats.totalUsers}
+              icon={UserIcon}
+              onClick={() => navigate('/admin/users')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <StatCard
+              title="Active Games"
+              value={stats.activeGames}
+              icon={GameIcon}
+              onClick={() => navigate('/admin/games')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <StatCard
+              title="Active Tournaments"
+              value={stats.activeTournaments}
+              icon={TournamentIcon}
+              onClick={() => navigate('/admin/tournaments')}
+            />
+          </Grid>
         </Grid>
       </Container>
     </AdminLayout>

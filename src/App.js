@@ -6,6 +6,8 @@ import CssBaseline from '@mui/material/CssBaseline';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import gameTheme from './theme/gameTheme';
+import { NotificationProvider } from './context/NotificationContext';
+import NotificationPermission from './components/Notifications/NotificationPermission';
 
 // Components
 import Navbar from './components/Navbar/Navbar';
@@ -92,60 +94,63 @@ function App() {
   return (
     <ThemeProvider theme={gameTheme}>
       <CssBaseline />
-      <Router>
-        <Box sx={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
-          <Navbar />
-          <Box component="main" sx={{ flexGrow: 1, pt: '64px' }}>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
-              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-              <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+      <NotificationProvider>
+        <Router>
+          <NotificationPermission />
+          <Box sx={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
+            <Navbar />
+            <Box component="main" sx={{ flexGrow: 1, pt: '64px' }}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
-              {/* User Routes */}
-              <Route path="/home" element={<UserRoute><UserHome /></UserRoute>} />
-              <Route path="/game-center" element={<UserRoute><GameCenter /></UserRoute>} />
-              <Route path="/tournaments" element={<UserRoute><Tournaments /></UserRoute>} />
-              <Route path="/teams" element={<UserRoute><Teams /></UserRoute>} />
-              <Route path="/community" element={<UserRoute><Community /></UserRoute>} />
-              <Route path="/streams" element={<UserRoute><LiveStreams /></UserRoute>} />
-              <Route path="/analytics" element={<UserRoute><Analytics /></UserRoute>} />
-              <Route path="/academy" element={<UserRoute><Academy /></UserRoute>} />
-              <Route path="/profile" element={<UserRoute><Profile /></UserRoute>} />
-              <Route path="/settings" element={<UserRoute><Settings /></UserRoute>} />
-              <Route path="/wallet" element={<UserRoute><Wallet /></UserRoute>} />
+                {/* User Routes */}
+                <Route path="/home" element={<UserRoute><UserHome /></UserRoute>} />
+                <Route path="/game-center" element={<UserRoute><GameCenter /></UserRoute>} />
+                <Route path="/tournaments" element={<UserRoute><Tournaments /></UserRoute>} />
+                <Route path="/teams" element={<UserRoute><Teams /></UserRoute>} />
+                <Route path="/community" element={<UserRoute><Community /></UserRoute>} />
+                <Route path="/streams" element={<UserRoute><LiveStreams /></UserRoute>} />
+                <Route path="/analytics" element={<UserRoute><Analytics /></UserRoute>} />
+                <Route path="/academy" element={<UserRoute><Academy /></UserRoute>} />
+                <Route path="/profile" element={<UserRoute><Profile /></UserRoute>} />
+                <Route path="/settings" element={<UserRoute><Settings /></UserRoute>} />
+                <Route path="/wallet" element={<UserRoute><Wallet /></UserRoute>} />
 
-              {/* Admin Routes */}
-              <Route
-                path="/admin"
-                element={
-                  <AdminRoute>
-                    <AdminDashboard />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/wallet-requests"
-                element={
-                  <AdminRoute>
-                    <AdminWalletRequests />
-                  </AdminRoute>
-                }
-              />
-              <Route path="/admin/tournaments" element={<AdminRoute><TournamentManagement /></AdminRoute>} />
-              <Route path="/admin/games" element={<AdminRoute><GameManagement /></AdminRoute>} />
-              <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
-              <Route path="/admin/content" element={<AdminRoute><ContentManagement /></AdminRoute>} />
-              <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
-              <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-              <Route path="/admin/transactions" element={<AdminRoute><AdminTransaction /></AdminRoute>} />
+                {/* Admin Routes */}
+                <Route
+                  path="/admin"
+                  element={
+                    <AdminRoute>
+                      <AdminDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/wallet-requests"
+                  element={
+                    <AdminRoute>
+                      <AdminWalletRequests />
+                    </AdminRoute>
+                  }
+                />
+                <Route path="/admin/tournaments" element={<AdminRoute><TournamentManagement /></AdminRoute>} />
+                <Route path="/admin/games" element={<AdminRoute><GameManagement /></AdminRoute>} />
+                <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
+                <Route path="/admin/content" element={<AdminRoute><ContentManagement /></AdminRoute>} />
+                <Route path="/admin/analytics" element={<AdminRoute><AdminAnalytics /></AdminRoute>} />
+                <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+                <Route path="/admin/transactions" element={<AdminRoute><AdminTransaction /></AdminRoute>} />
 
-              {/* 404 Route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                {/* 404 Route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Box>
           </Box>
-        </Box>
-      </Router>
+        </Router>
+      </NotificationProvider>
     </ThemeProvider>
   );
 }

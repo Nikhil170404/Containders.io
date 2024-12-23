@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { register, signInWithGoogle } from '../../redux/actions/authAction';
 import GoogleIcon from '@mui/icons-material/Google';
+import useAdmin from '../../hooks/useAdmin';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -22,7 +23,18 @@ const Register = () => {
   });
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error } = useSelector((state) => state.auth);
+  const { loading, error, user } = useSelector((state) => state.auth);
+  const { isAdmin } = useAdmin();
+
+  useEffect(() => {
+    if (user) {
+      if (isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
+    }
+  }, [user, isAdmin, navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -32,7 +44,6 @@ const Register = () => {
     e.preventDefault();
     try {
       await dispatch(register(formData.email, formData.password, formData.username));
-      navigate('/home');
     } catch (error) {
       console.error('Registration error:', error);
     }
@@ -41,7 +52,6 @@ const Register = () => {
   const handleGoogleSignIn = async () => {
     try {
       await dispatch(signInWithGoogle());
-      navigate('/home');
     } catch (error) {
       console.error('Google sign-in error:', error);
     }

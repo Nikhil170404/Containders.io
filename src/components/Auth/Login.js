@@ -16,11 +16,13 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, Google as GoogleIcon, SportsEsports } from '@mui/icons-material';
 import { login, signInWithGoogle } from '../../redux/actions/authAction';
+import useAdmin from '../../hooks/useAdmin';
 
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { loading, error: authError } = useSelector((state) => state.auth);
+  const { loading, error: authError, user } = useSelector((state) => state.auth);
+  const { isAdmin } = useAdmin();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -31,6 +33,16 @@ const Login = () => {
   useEffect(() => {
     setError('');
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      if (isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
+    }
+  }, [user, isAdmin, navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -47,8 +59,7 @@ const Login = () => {
     }
 
     try {
-      await dispatch(login(formData));
-      navigate('/dashboard');
+      await dispatch(login(formData.email, formData.password));
     } catch (err) {
       setError(err.message);
     }
@@ -57,7 +68,6 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     try {
       await dispatch(signInWithGoogle());
-      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     }

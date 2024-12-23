@@ -18,11 +18,6 @@ import {
   Box,
   Chip,
   TablePagination,
-  TextField,
-  Button,
-  Stack,
-  CircularProgress,
-  MenuItem,
 } from '@mui/material';
 import {
   Chart as ChartJS,
@@ -37,7 +32,6 @@ import {
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
 import { db, collection, query, where, getDocs, orderBy } from '../../firebase';
-import AdminLayout from './AdminLayout';
 
 ChartJS.register(
   CategoryScale,
