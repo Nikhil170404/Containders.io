@@ -14,7 +14,11 @@ import {
   InputAdornment,
   Divider,
 } from '@mui/material';
+<<<<<<< HEAD
 import { Visibility, VisibilityOff, Google as GoogleIcon, SportsEsports } from '@mui/icons-material';
+=======
+import { Visibility, VisibilityOff, Google as GoogleIcon } from '@mui/icons-material';
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
 import { login, signInWithGoogle } from '../../redux/actions/authAction';
 
 const Login = () => {
@@ -29,6 +33,10 @@ const Login = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
+<<<<<<< HEAD
+=======
+    // Clear errors when component mounts
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
     setError('');
   }, []);
 
@@ -59,6 +67,7 @@ const Login = () => {
   };
 
   return (
+<<<<<<< HEAD
     <Container 
       maxWidth="sm" 
       sx={{ 
@@ -127,6 +136,28 @@ const Login = () => {
               }
             }}
           >
+=======
+    <Container maxWidth="sm" sx={{ mt: { xs: 2, sm: 4 }, mb: 4 }}>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: { xs: 2, sm: 4 },
+          borderRadius: 2,
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
+        }}
+      >
+        <Typography variant="h4" align="center" gutterBottom>
+          Welcome Back
+        </Typography>
+        
+        <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 3 }}>
+          Sign in to continue to your account
+        </Typography>
+
+        {(error || authError) && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
             {error || authError}
           </Alert>
         )}
@@ -137,6 +168,7 @@ const Login = () => {
           startIcon={<GoogleIcon />}
           onClick={handleGoogleSignIn}
           disabled={loading}
+<<<<<<< HEAD
           sx={{
             mb: 3,
             py: 1.5,
@@ -147,10 +179,14 @@ const Login = () => {
               backgroundColor: 'rgba(255, 255, 255, 0.05)',
             },
           }}
+=======
+          sx={{ mb: 2 }}
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
         >
           Continue with Google
         </Button>
 
+<<<<<<< HEAD
         <Divider 
           sx={{ 
             my: 3,
@@ -162,6 +198,9 @@ const Login = () => {
         >
           or
         </Divider>
+=======
+        <Divider sx={{ my: 2 }}>or</Divider>
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
 
         <form onSubmit={handleSubmit}>
           <TextField
@@ -175,6 +214,7 @@ const Login = () => {
             required
             error={!!error}
             disabled={loading}
+<<<<<<< HEAD
             sx={{
               mb: 2,
               '& .MuiOutlinedInput-root': {
@@ -193,6 +233,9 @@ const Login = () => {
                 color: 'rgba(255, 255, 255, 0.7)',
               },
             }}
+=======
+            sx={{ mb: 2 }}
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
           />
           
           <TextField
@@ -212,13 +255,17 @@ const Login = () => {
                   <IconButton
                     onClick={() => setShowPassword(!showPassword)}
                     edge="end"
+<<<<<<< HEAD
                     sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+=======
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
                   >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </InputAdornment>
               ),
             }}
+<<<<<<< HEAD
             sx={{
               '& .MuiOutlinedInput-root': {
                 color: 'white',
@@ -236,6 +283,8 @@ const Login = () => {
                 color: 'rgba(255, 255, 255, 0.7)',
               },
             }}
+=======
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
           />
 
           <Button
@@ -245,6 +294,7 @@ const Login = () => {
             size="large"
             disabled={loading}
             sx={{ 
+<<<<<<< HEAD
               mt: 4,
               mb: 2,
               py: 1.5,
@@ -253,12 +303,20 @@ const Login = () => {
               '&:hover': {
                 background: 'linear-gradient(45deg, #1976D2 30%, #00BCD4 90%)',
                 boxShadow: '0 3px 20px rgba(33, 150, 243, 0.4)',
+=======
+              mt: 3,
+              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #1976D2 30%, #00BCD4 90%)',
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
               },
             }}
           >
             {loading ? <CircularProgress size={24} /> : 'Sign In'}
           </Button>
 
+<<<<<<< HEAD
           <Box sx={{ mt: 3, textAlign: 'center' }}>
             <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
               Don't have an account?{' '}
@@ -272,6 +330,17 @@ const Login = () => {
                     backgroundColor: 'transparent',
                   },
                 }}
+=======
+          
+
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Don't have an account?{' '}
+              <Button
+                color="primary"
+                onClick={() => navigate('/register')}
+                sx={{ textTransform: 'none' }}
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
               >
                 Sign up
               </Button>

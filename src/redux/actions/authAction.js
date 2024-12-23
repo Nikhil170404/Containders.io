@@ -30,6 +30,11 @@ export const LOGOUT = 'LOGOUT';
 export const SET_USER = 'SET_USER';
 export const UPDATE_PROFILE = 'UPDATE_PROFILE';
 
+<<<<<<< HEAD
+=======
+const ADMIN_EMAIL = 'admin@esports.com';
+
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
 // Register user
 export const register = (email, password, username) => async (dispatch) => {
   try {
@@ -49,7 +54,12 @@ export const register = (email, password, username) => async (dispatch) => {
       email: user.email,
       username: username,
       displayName: username,
+<<<<<<< HEAD
       role: 'user', // Default role
+=======
+      role: email === ADMIN_EMAIL ? 'admin' : 'user',
+      isAdmin: email === ADMIN_EMAIL,
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
       createdAt: new Date().toISOString(),
       photoURL: null,
       active: true,
@@ -57,6 +67,10 @@ export const register = (email, password, username) => async (dispatch) => {
 
     await setDoc(doc(db, 'users', user.uid), userData);
 
+<<<<<<< HEAD
+=======
+    // Update auth state
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
     dispatch({
       type: REGISTER_SUCCESS,
       payload: userData,
@@ -103,12 +117,22 @@ export const login = (email, password) => async (dispatch) => {
     const userDoc = await getDoc(doc(db, 'users', user.uid));
     const userData = userDoc.data() || {};
 
+<<<<<<< HEAD
+=======
+    // Check if user is admin
+    const isAdmin = email === ADMIN_EMAIL;
+
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
     const userWithRole = {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName,
       photoURL: user.photoURL,
+<<<<<<< HEAD
       role: userData.role || 'user',
+=======
+      isAdmin,
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
       ...userData,
     };
 
@@ -121,6 +145,7 @@ export const login = (email, password) => async (dispatch) => {
     });
 
   } catch (error) {
+<<<<<<< HEAD
     let errorMessage = 'Login failed. Please try again.';
     
     switch (error.code) {
@@ -142,6 +167,13 @@ export const login = (email, password) => async (dispatch) => {
       payload: errorMessage,
     });
     throw new Error(errorMessage);
+=======
+    dispatch({
+      type: LOGIN_FAIL,
+      payload: error.message,
+    });
+    throw error;
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
   }
 };
 
@@ -156,6 +188,7 @@ export const logout = () => async (dispatch) => {
   }
 };
 
+<<<<<<< HEAD
 // Set user from localStorage
 export const setUserFromLocalStorage = () => async (dispatch) => {
   const user = JSON.parse(localStorage.getItem('user'));
@@ -187,6 +220,19 @@ export const setUserFromLocalStorage = () => async (dispatch) => {
     }
   }
 };
+=======
+// Set user
+export const setUser = (user) => ({
+  type: SET_USER,
+  payload: user,
+});
+
+// Update user profile
+export const updateUserProfile = (userData) => ({
+  type: UPDATE_PROFILE,
+  payload: userData,
+});
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
 
 // Google Sign In
 export const signInWithGoogle = () => async (dispatch) => {
@@ -212,6 +258,10 @@ export const signInWithGoogle = () => async (dispatch) => {
         username: user.email.split('@')[0],
         displayName: user.displayName,
         role: 'user',
+<<<<<<< HEAD
+=======
+        isAdmin: false,
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
         createdAt: new Date().toISOString(),
         photoURL: user.photoURL,
         active: true,
@@ -242,6 +292,7 @@ export const signInWithGoogle = () => async (dispatch) => {
   }
 };
 
+<<<<<<< HEAD
 // Set user
 export const setUser = (user) => ({
   type: SET_USER,
@@ -253,3 +304,101 @@ export const updateUserProfile = (userData) => ({
   type: UPDATE_PROFILE,
   payload: userData,
 });
+=======
+// Check username availability
+export const checkUsernameAvailability = async (username) => {
+  if (!username || username.length < 3) {
+    throw new Error('Username must be at least 3 characters long');
+  }
+
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username', '==', username.toLowerCase()));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.empty;
+  } catch (error) {
+    console.error('Error checking username:', error);
+    throw new Error('Error checking username availability');
+  }
+};
+
+// Action to purchase a game
+export const purchaseGame = (gameName) => async (dispatch, getState) => {
+  dispatch({ type: 'PURCHASE_GAME_REQUEST' });
+  try {
+    const state = getState();
+    const user = state.auth.user;
+
+    if (!user) throw new Error('User not logged in');
+
+    const userPurchasesRef = doc(db, 'userPurchases', user.uid);
+    const userPurchasesDoc = await getDoc(userPurchasesRef);
+    const currentPurchases = userPurchasesDoc.exists() ? userPurchasesDoc.data().purchases || [] : [];
+
+    if (currentPurchases.includes(gameName)) {
+      throw new Error('Game already purchased');
+    }
+
+    await updateGameParticipants(gameName);
+
+    await updateDoc(userPurchasesRef, {
+      purchases: [...currentPurchases, gameName]
+    });
+
+    dispatch({ type: 'PURCHASE_GAME_SUCCESS', payload: { gameName } });
+  } catch (error) {
+    dispatch({ type: 'PURCHASE_GAME_FAILURE', payload: error.message });
+    console.error('Game purchase failed:', error.message);
+  }
+};
+
+// Function to update game participants
+const updateGameParticipants = async (gameName) => {
+  const gameRef = doc(db, 'games', gameName);
+  const gameDoc = await getDoc(gameRef);
+  
+  if (gameDoc.exists()) {
+    const gameData = gameDoc.data();
+    const updatedParticipants = gameData.participants - 1;
+    
+    if (updatedParticipants >= 0) {
+      await updateDoc(gameRef, { participants: updatedParticipants });
+    } else {
+      throw new Error('No participants left for this game');
+    }
+  } else {
+    throw new Error('Game not found');
+  }
+};
+
+// Action to purchase a tournament
+export const purchaseTournament = (tournamentId) => async (dispatch, getState) => {
+  dispatch({ type: 'PURCHASE_TOURNAMENT_REQUEST' });
+  try {
+    const state = getState();
+    const user = state.auth.user;
+
+    if (!user) throw new Error('User not logged in');
+
+    // Perform tournament purchase logic here
+
+    dispatch({ type: 'PURCHASE_TOURNAMENT_SUCCESS', payload: tournamentId });
+  } catch (error) {
+    dispatch({ type: 'PURCHASE_TOURNAMENT_FAILURE', payload: error.message });
+    console.error('Tournament purchase failed:', error.message);
+  }
+};
+
+// Set user from localStorage
+export const setUserFromLocalStorage = () => (dispatch) => {
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (user) {
+    // Ensure isAdmin is set correctly
+    user.isAdmin = user.email === ADMIN_EMAIL;
+    dispatch({
+      type: SET_USER,
+      payload: user,
+    });
+  }
+};
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2

@@ -15,12 +15,18 @@ import {
   SportsEsports as GameIcon,
   Person as UserIcon,
   AccountBalanceWallet as WalletIcon,
+<<<<<<< HEAD
   Assessment as AnalyticsIcon,
   Settings as SettingsIcon,
   Receipt as TransactionIcon,
 } from '@mui/icons-material';
 import { db, collection, getDocs } from '../../firebase';
 import AdminLayout from './AdminLayout';
+=======
+  AccountBalanceWallet,
+} from '@mui/icons-material';
+import { db, collection, getDocs } from '../../firebase';
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -59,6 +65,7 @@ const AdminDashboard = () => {
     navigate(path);
   };
 
+<<<<<<< HEAD
   const dashboardItems = [
     {
       title: 'Users',
@@ -178,3 +185,181 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+=======
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        Admin Dashboard
+      </Typography>
+      <Grid container spacing={3}>
+        {/* Users Card */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            sx={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: (theme) => theme.shadows[4],
+              },
+            }}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <UserIcon sx={{ fontSize: 40, color: 'primary.main', mr: 1 }} />
+                <Typography variant="h5">{stats.users}</Typography>
+              </Box>
+              <Typography variant="h6" gutterBottom>
+                Users
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Manage user accounts and permissions
+              </Typography>
+            </CardContent>
+            <CardActions>
+              <Button size="small" onClick={() => handleNavigate('/admin/users')}>
+                Manage Users
+              </Button>
+            </CardActions>
+          </Card>
+        </Grid>
+
+        {/* Tournaments Card */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            sx={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: (theme) => theme.shadows[4],
+              },
+            }}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <TournamentIcon sx={{ fontSize: 40, color: 'primary.main', mr: 1 }} />
+                <Typography variant="h5">{stats.tournaments}</Typography>
+              </Box>
+              <Typography variant="h6" gutterBottom>
+                Tournaments
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Create and manage tournaments
+              </Typography>
+            </CardContent>
+            <CardActions>
+              <Button size="small" onClick={() => handleNavigate('/admin/tournaments')}>
+                Manage Tournaments
+              </Button>
+            </CardActions>
+          </Card>
+        </Grid>
+
+        {/* Games Card */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            sx={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: (theme) => theme.shadows[4],
+              },
+            }}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <GameIcon sx={{ fontSize: 40, color: 'primary.main', mr: 1 }} />
+                <Typography variant="h5">{stats.games}</Typography>
+              </Box>
+              <Typography variant="h6" gutterBottom>
+                Games
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Add and manage games
+              </Typography>
+            </CardContent>
+            <CardActions>
+              <Button size="small" onClick={() => handleNavigate('/admin/games')}>
+                Manage Games
+              </Button>
+            </CardActions>
+          </Card>
+        </Grid>
+
+        {/* Transactions Card */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            sx={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: (theme) => theme.shadows[4],
+              },
+            }}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <WalletIcon sx={{ fontSize: 40, color: 'primary.main', mr: 1 }} />
+                <Typography variant="h5">{stats.transactions}</Typography>
+              </Box>
+              <Typography variant="h6" gutterBottom>
+                Transactions
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                View and manage transactions
+              </Typography>
+            </CardContent>
+            <CardActions>
+              <Button size="small" onClick={() => handleNavigate('/admin/transactions')}>
+                View Transactions
+              </Button>
+            </CardActions>
+          </Card>
+        </Grid>
+
+        {/* Wallet Requests Card */}
+        <Grid item xs={12} sm={6} md={4}>
+          <Card
+            sx={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              cursor: 'pointer',
+              '&:hover': {
+                transform: 'scale(1.02)',
+                transition: 'transform 0.2s ease-in-out',
+              },
+            }}
+            onClick={() => navigate('/admin/wallet-requests')}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <AccountBalanceWallet sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
+                <div>
+                  <Typography variant="h6">Wallet Requests</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Manage user wallet deposit requests
+                  </Typography>
+                </div>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Container>
+  );
+};
+
+export default AdminDashboard;
+>>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
