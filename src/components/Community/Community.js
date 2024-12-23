@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Container,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -16,16 +15,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress,
   Menu,
   MenuItem,
-  Divider,
   Paper,
   Tab,
   Tabs,
-  Badge,
-  LinearProgress,
-  Tooltip,
+  CircularProgress,
 } from '@mui/material';
 import {
   Comment,
@@ -40,13 +35,8 @@ import {
   BookmarkBorder,
   Forum,
   LocalFireDepartment,
-  Whatshot,
   EmojiEventsOutlined,
-  WorkspacePremium,
-  Psychology,
 } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
-import { useSelector } from 'react-redux';
 import { db, storage, auth } from '../../firebase';
 import {
   collection,
@@ -58,31 +48,12 @@ import {
   doc,
   updateDoc,
   deleteDoc,
-  arrayUnion,
-  arrayRemove,
-  getDoc
+  where,
+  limit,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { v4 as uuidv4 } from 'uuid';
-
-const StyledBadge = styled(Badge)(({ theme }) => ({
-  '& .MuiBadge-badge': {
-    backgroundColor: theme.palette.gaming.neon,
-    color: theme.palette.common.black,
-    fontWeight: 'bold',
-    boxShadow: `0 0 10px ${theme.palette.gaming.neon}`,
-  },
-}));
-
-const XPProgress = styled(LinearProgress)(({ theme }) => ({
-  height: 8,
-  borderRadius: 4,
-  backgroundColor: 'rgba(0, 255, 157, 0.1)',
-  '& .MuiLinearProgress-bar': {
-    background: `linear-gradient(45deg, ${theme.palette.gaming.neon}, ${theme.palette.gaming.cyan})`,
-  },
-}));
 
 const Community = () => {
   const [user] = useAuthState(auth);
@@ -96,13 +67,16 @@ const Community = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentTab, setCurrentTab] = useState('feed');
   const [dailyChallenge, setDailyChallenge] = useState(null);
+  const [bookmarkedPosts, setBookmarkedPosts] = useState([]);
 
   useEffect(() => {
+    setLoading(true);
     const postsRef = collection(db, 'posts');
     const q = query(postsRef, orderBy('timestamp', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPosts(postList);
+      setLoading(false);
     });
 
     const trendingPostsRef = collection(db, 'trendingPosts');
@@ -133,9 +107,17 @@ const Community = () => {
     };
   }, []);
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedImage(file);
+    }
+  };
+
   const handlePostSubmit = async () => {
     if (!postText.trim() && !selectedImage) return;
 
+    setLoading(true);
     try {
       let imageUrl = '';
       if (selectedImage) {
@@ -158,12 +140,15 @@ const Community = () => {
       setSelectedImage(null);
     } catch (error) {
       console.error('Error creating post:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleComment = async () => {
     if (!commentText.trim()) return;
 
+    setLoading(true);
     try {
       const postRef = doc(db, 'posts', selectedPost.id);
       await updateDoc(postRef, {
@@ -179,15 +164,70 @@ const Community = () => {
       setCommentText('');
     } catch (error) {
       console.error('Error adding comment:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDeletePost = async (postId) => {
+    setLoading(true);
     try {
       await deleteDoc(doc(db, 'posts', postId));
       setAnchorEl(null);
     } catch (error) {
       console.error('Error deleting post:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReaction = async (postId, reaction) => {
+    try {
+      const postRef = doc(db, 'posts', postId);
+      const post = posts.find(p => p.id === postId);
+      const currentReactions = post.reactions || {};
+      
+      if (currentReactions[user.uid] === reaction) {
+        await updateDoc(postRef, {
+          [`reactions.${user.uid}`]: null
+        });
+      } else {
+        await updateDoc(postRef, {
+          [`reactions.${user.uid}`]: reaction
+        });
+      }
+    } catch (error) {
+      console.error('Error handling reaction:', error);
+    }
+  };
+
+  const handleShare = async (postId) => {
+    try {
+      const postRef = doc(db, 'posts', postId);
+      await updateDoc(postRef, {
+        shares: (posts.find(p => p.id === postId).shares || 0) + 1
+      });
+    } catch (error) {
+      console.error('Error sharing post:', error);
+    }
+  };
+
+  const handleBookmark = async (postId) => {
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      if (bookmarkedPosts.includes(postId)) {
+        setBookmarkedPosts(bookmarkedPosts.filter(id => id !== postId));
+        await updateDoc(userRef, {
+          bookmarkedPosts: bookmarkedPosts.filter(id => id !== postId)
+        });
+      } else {
+        setBookmarkedPosts([...bookmarkedPosts, postId]);
+        await updateDoc(userRef, {
+          bookmarkedPosts: [...bookmarkedPosts, postId]
+        });
+      }
+    } catch (error) {
+      console.error('Error bookmarking post:', error);
     }
   };
 
@@ -196,17 +236,15 @@ const Community = () => {
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Box sx={{ position: 'relative' }}>
-              <Avatar
-                src={post.userAvatar}
-                alt={post.userName}
-                sx={{
-                  width: 48,
-                  height: 48,
-                  border: '2px solid gold'
-                }}
-              />
-            </Box>
+            <Avatar
+              src={post.userAvatar}
+              alt={post.userName}
+              sx={{
+                width: 48,
+                height: 48,
+                border: '2px solid gold'
+              }}
+            />
             <Box sx={{ ml: 2 }}>
               <Typography variant="subtitle1" fontWeight="bold">
                 {post.userName}
@@ -271,6 +309,7 @@ const Community = () => {
               size="small"
               onClick={() => handleReaction(post.id, reaction)}
               color={post.reactions?.[user.uid] === reaction ? 'primary' : 'default'}
+              disabled={loading}
             >
               {reaction}
             </IconButton>
@@ -280,6 +319,7 @@ const Community = () => {
           size="small"
           startIcon={<Comment />}
           onClick={() => setSelectedPost(post)}
+          disabled={loading}
         >
           {post.comments ? Object.keys(post.comments).length : 0}
         </Button>
@@ -287,12 +327,14 @@ const Community = () => {
           size="small"
           startIcon={<Share />}
           onClick={() => handleShare(post.id)}
+          disabled={loading}
         >
           {post.shares}
         </Button>
         <IconButton
           size="small"
           onClick={() => handleBookmark(post.id)}
+          disabled={loading}
           sx={{ ml: 'auto' }}
         >
           {bookmarkedPosts.includes(post.id) ? <Bookmark color="primary" /> : <BookmarkBorder />}
@@ -301,43 +343,13 @@ const Community = () => {
     </Card>
   );
 
-  const renderDailyChallenge = () => (
-    <Card sx={{ mb: 3, background: 'linear-gradient(45deg, #16213e 30%, #1a1a2e 90%)' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <LocalFireDepartment color="error" sx={{ mr: 1 }} />
-          <Typography variant="h6">Daily Challenge</Typography>
-        </Box>
-        {dailyChallenge ? (
-          <>
-            <Typography variant="subtitle1" gutterBottom>
-              {dailyChallenge.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              {dailyChallenge.description}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip
-                icon={<EmojiEventsOutlined />}
-                label={`${dailyChallenge.xpReward} XP`}
-                color="primary"
-                variant="outlined"
-              />
-              <LinearProgress
-                variant="determinate"
-                value={(dailyChallenge.progress || 0) * 100}
-                sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
-              />
-            </Box>
-          </>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            No active challenge
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  );
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
@@ -378,6 +390,7 @@ const Community = () => {
                 placeholder="Share your gaming moments..."
                 value={postText}
                 onChange={(e) => setPostText(e.target.value)}
+                disabled={loading}
                 sx={{ mb: 2 }}
               />
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -387,17 +400,18 @@ const Community = () => {
                   onChange={handleImageChange}
                   style={{ display: 'none' }}
                   id="image-input"
+                  disabled={loading}
                 />
                 <label htmlFor="image-input">
-                  <IconButton component="span" color="primary">
+                  <IconButton component="span" color="primary" disabled={loading}>
                     <ImageIcon />
                   </IconButton>
                 </label>
                 <Button
                   variant="contained"
-                  endIcon={<Send />}
+                  endIcon={loading ? <CircularProgress size={20} /> : <Send />}
                   onClick={handlePostSubmit}
-                  disabled={!postText.trim() && !selectedImage}
+                  disabled={(!postText.trim() && !selectedImage) || loading}
                 >
                   Post
                 </Button>
@@ -415,7 +429,45 @@ const Community = () => {
 
         {currentTab === 'challenges' && (
           <Box sx={{ p: 2 }}>
-            {renderDailyChallenge()}
+            {dailyChallenge && (
+              <Card sx={{ mb: 3, background: 'linear-gradient(45deg, #16213e 30%, #1a1a2e 90%)' }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <LocalFireDepartment color="error" sx={{ mr: 1 }} />
+                    <Typography variant="h6">{dailyChallenge.title}</Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    {dailyChallenge.description}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip
+                      icon={<EmojiEventsOutlined />}
+                      label={`${dailyChallenge.xpReward} XP`}
+                      color="primary"
+                      variant="outlined"
+                    />
+                    <Box 
+                      sx={{ 
+                        flexGrow: 1, 
+                        height: 8, 
+                        borderRadius: 4, 
+                        bgcolor: 'rgba(0, 255, 157, 0.1)',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <Box 
+                        sx={{ 
+                          width: `${(dailyChallenge.progress || 0) * 100}%`,
+                          height: '100%',
+                          borderRadius: 4,
+                          background: 'linear-gradient(45deg, #00ff9d, #00b8d4)'
+                        }} 
+                      />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
           </Box>
         )}
       </Paper>
@@ -448,13 +500,14 @@ const Community = () => {
                   placeholder="Add a comment..."
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
+                  disabled={loading}
                 />
                 <Button
                   variant="contained"
                   onClick={handleComment}
-                  disabled={!commentText.trim()}
+                  disabled={!commentText.trim() || loading}
                 >
-                  Send
+                  {loading ? <CircularProgress size={20} /> : 'Send'}
                 </Button>
               </Box>
             </DialogContent>
@@ -475,11 +528,9 @@ const Community = () => {
         onClose={() => setAnchorEl(null)}
       >
         <MenuItem
-          onClick={() => {
-            handleDeletePost(selectedPost.id);
-            setAnchorEl(null);
-          }}
+          onClick={() => handleDeletePost(selectedPost.id)}
           sx={{ color: 'error.main' }}
+          disabled={loading}
         >
           Delete Post
         </MenuItem>
