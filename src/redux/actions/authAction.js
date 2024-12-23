@@ -30,11 +30,8 @@ export const LOGOUT = 'LOGOUT';
 export const SET_USER = 'SET_USER';
 export const UPDATE_PROFILE = 'UPDATE_PROFILE';
 
-<<<<<<< HEAD
-=======
 const ADMIN_EMAIL = 'admin@esports.com';
 
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
 // Register user
 export const register = (email, password, username) => async (dispatch) => {
   try {
@@ -54,12 +51,8 @@ export const register = (email, password, username) => async (dispatch) => {
       email: user.email,
       username: username,
       displayName: username,
-<<<<<<< HEAD
-      role: 'user', // Default role
-=======
       role: email === ADMIN_EMAIL ? 'admin' : 'user',
       isAdmin: email === ADMIN_EMAIL,
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
       createdAt: new Date().toISOString(),
       photoURL: null,
       active: true,
@@ -67,10 +60,7 @@ export const register = (email, password, username) => async (dispatch) => {
 
     await setDoc(doc(db, 'users', user.uid), userData);
 
-<<<<<<< HEAD
-=======
     // Update auth state
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
     dispatch({
       type: REGISTER_SUCCESS,
       payload: userData,
@@ -117,22 +107,15 @@ export const login = (email, password) => async (dispatch) => {
     const userDoc = await getDoc(doc(db, 'users', user.uid));
     const userData = userDoc.data() || {};
 
-<<<<<<< HEAD
-=======
     // Check if user is admin
     const isAdmin = email === ADMIN_EMAIL;
 
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
     const userWithRole = {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName,
       photoURL: user.photoURL,
-<<<<<<< HEAD
-      role: userData.role || 'user',
-=======
       isAdmin,
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
       ...userData,
     };
 
@@ -145,35 +128,11 @@ export const login = (email, password) => async (dispatch) => {
     });
 
   } catch (error) {
-<<<<<<< HEAD
-    let errorMessage = 'Login failed. Please try again.';
-    
-    switch (error.code) {
-      case 'auth/user-not-found':
-        errorMessage = 'No account found with this email.';
-        break;
-      case 'auth/wrong-password':
-        errorMessage = 'Invalid password.';
-        break;
-      case 'auth/invalid-email':
-        errorMessage = 'Invalid email address.';
-        break;
-      default:
-        errorMessage = error.message;
-    }
-
-    dispatch({
-      type: LOGIN_FAIL,
-      payload: errorMessage,
-    });
-    throw new Error(errorMessage);
-=======
     dispatch({
       type: LOGIN_FAIL,
       payload: error.message,
     });
     throw error;
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
   }
 };
 
@@ -188,39 +147,6 @@ export const logout = () => async (dispatch) => {
   }
 };
 
-<<<<<<< HEAD
-// Set user from localStorage
-export const setUserFromLocalStorage = () => async (dispatch) => {
-  const user = JSON.parse(localStorage.getItem('user'));
-  if (user) {
-    try {
-      // Get fresh user data from Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data() || {};
-      
-      const updatedUser = {
-        ...user,
-        ...userData,
-      };
-      
-      // Update localStorage with fresh data
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      
-      dispatch({
-        type: SET_USER,
-        payload: updatedUser,
-      });
-    } catch (error) {
-      console.error('Error refreshing user data:', error);
-      // Still dispatch the stored user data if refresh fails
-      dispatch({
-        type: SET_USER,
-        payload: user,
-      });
-    }
-  }
-};
-=======
 // Set user
 export const setUser = (user) => ({
   type: SET_USER,
@@ -232,7 +158,6 @@ export const updateUserProfile = (userData) => ({
   type: UPDATE_PROFILE,
   payload: userData,
 });
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
 
 // Google Sign In
 export const signInWithGoogle = () => async (dispatch) => {
@@ -258,10 +183,7 @@ export const signInWithGoogle = () => async (dispatch) => {
         username: user.email.split('@')[0],
         displayName: user.displayName,
         role: 'user',
-<<<<<<< HEAD
-=======
         isAdmin: false,
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
         createdAt: new Date().toISOString(),
         photoURL: user.photoURL,
         active: true,
@@ -292,19 +214,6 @@ export const signInWithGoogle = () => async (dispatch) => {
   }
 };
 
-<<<<<<< HEAD
-// Set user
-export const setUser = (user) => ({
-  type: SET_USER,
-  payload: user,
-});
-
-// Update user profile
-export const updateUserProfile = (userData) => ({
-  type: UPDATE_PROFILE,
-  payload: userData,
-});
-=======
 // Check username availability
 export const checkUsernameAvailability = async (username) => {
   if (!username || username.length < 3) {
@@ -401,4 +310,3 @@ export const setUserFromLocalStorage = () => (dispatch) => {
     });
   }
 };
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2

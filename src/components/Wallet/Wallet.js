@@ -15,10 +15,7 @@ import {
   DialogActions,
   Alert,
   Snackbar,
-<<<<<<< HEAD
-=======
   Paper,
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
   Table,
   TableBody,
   TableCell,
@@ -26,7 +23,6 @@ import {
   TableHead,
   TableRow,
   Chip,
-<<<<<<< HEAD
   Select,
   MenuItem,
   FormControl,
@@ -42,12 +38,6 @@ import {
 } from '@mui/icons-material';
 import { fetchWallet } from '../../redux/actions/walletAction';
 import { db, collection, doc, getDoc, setDoc, serverTimestamp, updateDoc } from '../../firebase';
-=======
-} from '@mui/material';
-import { AccountBalance, AccountBalanceWallet } from '@mui/icons-material';
-import { fetchWallet } from '../../redux/actions/walletAction';
-import { db, collection, doc, getDoc, setDoc, serverTimestamp } from '../../firebase';
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
 
 const bankDetails = {
   accountName: "Your Company Name",
@@ -63,7 +53,6 @@ const Wallet = () => {
   const [transactionId, setTransactionId] = useState('');
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
-<<<<<<< HEAD
   const [openWithdrawDialog, setOpenWithdrawDialog] = useState(false);
   const [openBankDialog, setOpenBankDialog] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -77,42 +66,26 @@ const Wallet = () => {
     bankName: '',
     branch: '',
   });
-=======
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [transactions, setTransactions] = useState([]);
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
 
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const wallet = useSelector((state) => state.wallet);
 
-<<<<<<< HEAD
   const fetchUserData = useCallback(async () => {
-=======
-  const fetchTransactions = useCallback(async () => {
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
     try {
       const walletRef = doc(db, 'wallets', user.uid);
       const walletDoc = await getDoc(walletRef);
       
       if (!walletDoc.exists()) {
-<<<<<<< HEAD
-=======
-        // Create wallet document if it doesn't exist
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
         await setDoc(walletRef, {
           userId: user.uid,
           balance: 0,
           transactions: [],
-<<<<<<< HEAD
           banks: [],
-=======
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
         setTransactions([]);
-<<<<<<< HEAD
         setUserBanks([]);
       } else {
         const data = walletDoc.data();
@@ -124,17 +97,6 @@ const Wallet = () => {
       setSnackbar({
         open: true,
         message: 'Error fetching user data',
-=======
-      } else {
-        const data = walletDoc.data();
-        setTransactions(data.transactions || []);
-      }
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      setSnackbar({
-        open: true,
-        message: 'Error fetching transactions',
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
         severity: 'error'
       });
     }
@@ -143,7 +105,6 @@ const Wallet = () => {
   useEffect(() => {
     if (user) {
       dispatch(fetchWallet());
-<<<<<<< HEAD
       fetchUserData();
     }
   }, [user, dispatch, fetchUserData]);
@@ -183,13 +144,13 @@ const Wallet = () => {
       const newBankWithId = {
         ...newBank,
         id: Date.now().toString(),
-        addedAt: new Date().toISOString(), 
+        addedAt: new Date().toISOString(),
         status: 'active'
       };
 
       await updateDoc(walletRef, {
         banks: [...userBanks, newBankWithId],
-        updatedAt: serverTimestamp() 
+        updatedAt: serverTimestamp()
       });
 
       setUserBanks([...userBanks, newBankWithId]);
@@ -236,7 +197,6 @@ const Wallet = () => {
       const selectedBankDetails = userBanks.find(bank => bank.id === selectedBank);
       const requestId = withdrawalRef.id;
 
-      // Create withdrawal request without deducting balance
       await setDoc(withdrawalRef, {
         requestId,
         userId: user.uid,
@@ -251,7 +211,6 @@ const Wallet = () => {
         remarks: '',
       });
 
-      // Add to user's transactions list
       const walletRef = doc(db, 'wallets', user.uid);
       await updateDoc(walletRef, {
         transactions: [{
@@ -289,23 +248,6 @@ const Wallet = () => {
   };
 
   const handleSubmitDeposit = async () => {
-=======
-      fetchTransactions();
-    }
-  }, [user, dispatch, fetchTransactions]);
-
-  const handleOpenDialog = () => {
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setAmount('');
-    setTransactionId('');
-  };
-
-  const handleSubmitRequest = async () => {
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
     if (!user || amount <= 0 || !transactionId) {
       setSnackbar({
         open: true,
@@ -323,10 +265,6 @@ const Wallet = () => {
         throw new Error('Invalid amount');
       }
 
-<<<<<<< HEAD
-=======
-      // Create deposit request
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
       const depositRequestRef = doc(collection(db, 'depositRequests'));
       await setDoc(depositRequestRef, {
         userId: user.uid,
@@ -344,20 +282,12 @@ const Wallet = () => {
       });
 
       handleCloseDialog();
-<<<<<<< HEAD
       fetchUserData();
-=======
-      fetchTransactions();
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
     } catch (error) {
       console.error('Error submitting deposit request:', error);
       setSnackbar({
         open: true,
-<<<<<<< HEAD
         message: 'Error submitting deposit request',
-=======
-        message: 'Error submitting deposit request. Please try again.',
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
         severity: 'error',
       });
     } finally {
@@ -387,7 +317,6 @@ const Wallet = () => {
                   <Typography variant="h4">₹{formatAmount(wallet.balance)}</Typography>
                 </div>
               </Box>
-<<<<<<< HEAD
               <Grid container spacing={2}>
                 <Grid item xs={6}>
                   <Button
@@ -410,74 +339,12 @@ const Wallet = () => {
                   >
                     Withdraw
                   </Button>
-=======
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={handleOpenDialog}
-                startIcon={<AccountBalance />}
-              >
-                Add Money
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Bank Details Card */}
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Bank Account Details
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    Account Name
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {bankDetails.accountName}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    Account Number
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {bankDetails.accountNumber}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    IFSC Code
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {bankDetails.ifscCode}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    Bank Name
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {bankDetails.bankName}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="textSecondary">
-                    UPI ID
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    {bankDetails.upiId}
-                  </Typography>
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
                 </Grid>
               </Grid>
             </CardContent>
           </Card>
         </Grid>
 
-<<<<<<< HEAD
         {/* Bank Accounts */}
         <Grid item xs={12} md={8}>
           <Card>
@@ -531,22 +398,13 @@ const Wallet = () => {
         </Grid>
 
         {/* Recent Transactions */}
-=======
-        {/* Transactions Table */}
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
         <Grid item xs={12}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-<<<<<<< HEAD
                 Recent Transactions
               </Typography>
               <TableContainer>
-=======
-                Transaction History
-              </Typography>
-              <TableContainer component={Paper}>
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -558,10 +416,9 @@ const Wallet = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-<<<<<<< HEAD
-                    {transactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>{formatDate(transaction.createdAt)}</TableCell>
+                    {transactions.map((transaction, index) => (
+                      <TableRow key={transaction.id || index}>
+                        <TableCell>{formatDate(transaction.timestamp || transaction.date)}</TableCell>
                         <TableCell>
                           <Chip
                             label={transaction.type}
@@ -576,39 +433,18 @@ const Wallet = () => {
                             color={
                               transaction.status === 'completed' ? 'success' :
                               transaction.status === 'pending' ? 'warning' : 'error'
-=======
-                    {transactions.map((transaction, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{formatDate(transaction.date)}</TableCell>
-                        <TableCell>{transaction.type}</TableCell>
-                        <TableCell>₹{formatAmount(transaction.amount)}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={transaction.status || 'completed'}
-                            color={
-                              transaction.status === 'pending'
-                                ? 'warning'
-                                : transaction.status === 'rejected'
-                                ? 'error'
-                                : 'success'
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
                             }
                             size="small"
                           />
                         </TableCell>
-                        <TableCell>{transaction.details}</TableCell>
-                      </TableRow>
-                    ))}
-<<<<<<< HEAD
-=======
-                    {transactions.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center">
-                          No transactions found
+                        <TableCell>
+                          {transaction.bankDetails ? 
+                            `${transaction.bankDetails.bankName} - ${transaction.bankDetails.accountNumber}` :
+                            transaction.details || '-'
+                          }
                         </TableCell>
                       </TableRow>
-                    )}
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
+                    ))}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -617,13 +453,12 @@ const Wallet = () => {
         </Grid>
       </Grid>
 
-<<<<<<< HEAD
       {/* Deposit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>Deposit Money</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
+            <Typography variant="subtitle2" gutterBottom>
               Bank Account Details for Deposit
             </Typography>
             <Grid container spacing={2}>
@@ -673,6 +508,9 @@ const Wallet = () => {
               </Grid>
             </Grid>
             <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" gutterBottom>
+              Enter Deposit Details
+            </Typography>
             <TextField
               fullWidth
               label="Amount"
@@ -681,7 +519,7 @@ const Wallet = () => {
               onChange={(e) => setAmount(e.target.value)}
               margin="normal"
               InputProps={{
-                startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>,
+                startAdornment: <Typography>₹</Typography>,
               }}
             />
             <TextField
@@ -690,54 +528,20 @@ const Wallet = () => {
               value={transactionId}
               onChange={(e) => setTransactionId(e.target.value)}
               margin="normal"
-              helperText="Enter the transaction ID after making the payment"
+              helperText="Enter the transaction ID from your bank transfer"
             />
           </Box>
-=======
-      {/* Add Money Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Money to Wallet</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="textSecondary" gutterBottom>
-              1. Transfer money to our bank account or UPI
-            </Typography>
-            <Typography variant="body2" color="textSecondary" gutterBottom>
-              2. Enter the amount and transaction ID below
-            </Typography>
-            <Typography variant="body2" color="textSecondary" gutterBottom>
-              3. Admin will verify and add the amount to your wallet
-            </Typography>
-          </Box>
-          <TextField
-            fullWidth
-            label="Amount (₹)"
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            sx={{ mt: 2 }}
-            required
-          />
-          <TextField
-            fullWidth
-            label="Transaction ID"
-            value={transactionId}
-            onChange={(e) => setTransactionId(e.target.value)}
-            sx={{ mt: 2 }}
-            required
-            helperText="Enter the transaction ID from your bank/UPI payment"
-          />
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleCloseDialog} disabled={loading}>
+            Cancel
+          </Button>
           <Button
-<<<<<<< HEAD
             onClick={handleSubmitDeposit}
             variant="contained"
             disabled={loading || !amount || !transactionId}
           >
-            {loading ? 'Submitting...' : 'Submit'}
+            Submit Request
           </Button>
         </DialogActions>
       </Dialog>
@@ -769,26 +573,26 @@ const Wallet = () => {
               onChange={(e) => setAmount(e.target.value)}
               margin="normal"
               InputProps={{
-                startAdornment: <Typography sx={{ mr: 1 }}>₹</Typography>,
+                startAdornment: <Typography>₹</Typography>,
               }}
             />
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                Withdrawal will be processed within 30 minutes during business hours.
-                Minimum withdrawal: ₹100
-                Maximum withdrawal: ₹50,000 per transaction
+            {wallet.balance > 0 && (
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                Available Balance: ₹{formatAmount(wallet.balance)}
               </Typography>
-            </Alert>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleCloseDialog} disabled={loading}>
+            Cancel
+          </Button>
           <Button
             onClick={handleWithdraw}
             variant="contained"
-            disabled={loading || !amount || !selectedBank || amount > wallet.balance}
+            disabled={loading || !amount || !selectedBank}
           >
-            {loading ? 'Processing...' : 'Withdraw'}
+            Submit Request
           </Button>
         </DialogActions>
       </Dialog>
@@ -828,7 +632,7 @@ const Wallet = () => {
             />
             <TextField
               fullWidth
-              label="Branch"
+              label="Branch Name"
               value={newBank.branch}
               onChange={(e) => setNewBank({ ...newBank, branch: e.target.value })}
               margin="normal"
@@ -836,42 +640,29 @@ const Wallet = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleCloseDialog} disabled={loading}>
+            Cancel
+          </Button>
           <Button
             onClick={handleAddBank}
             variant="contained"
-            disabled={loading || !newBank.accountName || !newBank.accountNumber || !newBank.ifscCode || !newBank.bankName}
+            disabled={loading || !newBank.accountName || !newBank.accountNumber || !newBank.ifscCode || !newBank.bankName || !newBank.branch}
           >
-            Add Bank
-=======
-            onClick={handleSubmitRequest}
-            variant="contained"
-            disabled={loading || !amount || !transactionId}
-          >
-            {loading ? 'Submitting...' : 'Submit Request'}
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
+            Add Bank Account
           </Button>
         </DialogActions>
       </Dialog>
 
-<<<<<<< HEAD
-=======
-      {/* Snackbar for notifications */}
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-<<<<<<< HEAD
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
-=======
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
         >
->>>>>>> 4ea65ed11c095c112a7ad060e6544fcd1c0bfab2
           {snackbar.message}
         </Alert>
       </Snackbar>
