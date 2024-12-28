@@ -5,23 +5,20 @@
     <title>Containders.io</title>
     <script type="text/javascript">
       // Single Page Apps for GitHub Pages
-      // MIT License
-      // https://github.com/rafgraph/spa-github-pages
       var pathSegments = window.location.pathname.split('/');
       var repoName = 'Containders.io';
-      var baseIndex = pathSegments.indexOf(repoName);
       
       var l = window.location;
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        '/' + repoName + '/' +
-        pathSegments.slice(baseIndex + 1).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        '/' + repoName + '/#' +
+        pathSegments.slice(2).join('/') +
+        (l.search ? '?' + l.search.slice(1) : '') +
         l.hash
       );
     </script>
   </head>
   <body>
-    Redirecting to GitHub Pages...
+    Redirecting to app...
   </body>
 </html>
