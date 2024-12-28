@@ -1,6 +1,7 @@
 {
   "name": "containders",
   "version": "0.1.0",
+  "homepage": "https://nikhil170404.github.io/Containders.io",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.13.3",
@@ -38,14 +39,16 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "gh-pages": "^6.2.0",
+    "gh-pages": "^4.0.0",
     "http-proxy-middleware": "^3.0.3"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
