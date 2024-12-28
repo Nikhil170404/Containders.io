@@ -1,7 +1,6 @@
 {
   "name": "containders",
   "version": "0.1.0",
-  "homepage": "/Containders.io",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.13.3",
@@ -46,10 +45,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
-    "create-indexes": "node scripts/create-indexes.js"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
