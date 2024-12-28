@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "https://nikhil170404.github.io/Containders.io/static/css/main.5ed78f12.css",
-    "main.js": "https://nikhil170404.github.io/Containders.io/static/js/main.a5b12dbd.js",
-    "static/js/453.46c1e3b5.chunk.js": "https://nikhil170404.github.io/Containders.io/static/js/453.46c1e3b5.chunk.js",
-    "index.html": "https://nikhil170404.github.io/Containders.io/index.html",
-    "main.5ed78f12.css.map": "https://nikhil170404.github.io/Containders.io/static/css/main.5ed78f12.css.map",
-    "main.a5b12dbd.js.map": "https://nikhil170404.github.io/Containders.io/static/js/main.a5b12dbd.js.map",
-    "453.46c1e3b5.chunk.js.map": "https://nikhil170404.github.io/Containders.io/static/js/453.46c1e3b5.chunk.js.map"
+    "main.css": "/Containders.io/static/css/main.5ed78f12.css",
+    "main.js": "/Containders.io/static/js/main.cad43272.js",
+    "static/js/453.46c1e3b5.chunk.js": "/Containders.io/static/js/453.46c1e3b5.chunk.js",
+    "index.html": "/Containders.io/index.html",
+    "main.5ed78f12.css.map": "/Containders.io/static/css/main.5ed78f12.css.map",
+    "main.cad43272.js.map": "/Containders.io/static/js/main.cad43272.js.map",
+    "453.46c1e3b5.chunk.js.map": "/Containders.io/static/js/453.46c1e3b5.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.5ed78f12.css",
-    "static/js/main.a5b12dbd.js"
+    "static/js/main.cad43272.js"
   ]
 }
