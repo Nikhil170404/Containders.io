@@ -37,7 +37,7 @@ import Settings from './components/Settings/Settings';
 import Wallet from './components/Wallet/Wallet';
 import NotFound from './components/NotFound/NotFound';
 import Tournaments from './components/Tournaments/Tournaments';
-import TournamentDetails from './components/Tournaments/TournamentDetails';
+import TournamentDetailsPage from './components/Tournaments/TournamentDetailsPage';
 import UserNotifications from './components/User/UserNotifications';
 
 // Custom Hooks
@@ -97,7 +97,7 @@ function App() {
     <ThemeProvider theme={gameTheme}>
       <CssBaseline />
       <NotificationProvider>
-        <Router>
+        <Router basename={process.env.PUBLIC_URL}>
           <NotificationPermission />
           <Box sx={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
             <Navbar />
@@ -118,11 +118,11 @@ function App() {
                 <Route path="/settings" element={<UserRoute><Settings /></UserRoute>} />
                 <Route path="/wallet" element={<UserRoute><Wallet /></UserRoute>} />
                 <Route path="/tournaments" element={<UserRoute><Tournaments /></UserRoute>} />
-                <Route path="/tournament/:id" element={<UserRoute><TournamentDetails /></UserRoute>} />
+                <Route path="/tournament/:id" element={<UserRoute><TournamentDetailsPage /></UserRoute>} />
                 <Route path="/notifications" element={<UserRoute><UserNotifications /></UserRoute>} />
 
                 {/* Admin Routes */}
-                <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                 <Route path="/admin/wallet-requests" element={<AdminRoute><AdminWalletRequests /></AdminRoute>} />
                 <Route path="/admin/tournaments" element={<AdminRoute><TournamentManagement /></AdminRoute>} />
                 <Route path="/admin/games" element={<AdminRoute><GameManagement /></AdminRoute>} />

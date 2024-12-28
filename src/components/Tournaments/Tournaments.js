@@ -3,328 +3,203 @@ import {
   Container,
   Grid,
   Typography,
-  Card,
-  CardContent,
-  CardActions,
-  Button,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Alert,
-  Snackbar,
   Box,
+  Paper,
+  Tabs,
+  Tab,
+  InputAdornment,
+  TextField,
+  IconButton,
+  Badge,
+  CircularProgress,
+  Alert,
+  Tooltip,
 } from '@mui/material';
+import {
+  Search,
+  Refresh,
+} from '@mui/icons-material';
 import { useSelector } from 'react-redux';
-import { db, doc, collection, query, updateDoc, getDoc, increment, onSnapshot } from '../../firebase';
-import { useNavigate } from 'react-router-dom';
+import { db, collection, query, orderBy, onSnapshot } from '../../firebase';
+import TournamentCard from './TournamentCard';
+import TournamentRegistration from './TournamentRegistration';
+import TournamentDetails from './TournamentDetails';
 
 const Tournaments = () => {
+  const user = useSelector(state => state.auth.user);
   const [tournaments, setTournaments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [currentTab, setCurrentTab] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedTournament, setSelectedTournament] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [gameId, setGameId] = useState('');
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
-  const { user } = useSelector((state) => state.auth);
-  const navigate = useNavigate();
+  const [openRegistration, setOpenRegistration] = useState(false);
+  const [openDetails, setOpenDetails] = useState(false);
+  const [registeredTournaments, setRegisteredTournaments] = useState([]);
 
-  // Add real-time tournament updates
+  // Real-time tournament updates
   useEffect(() => {
-    const q = query(collection(db, 'tournaments'));
+    const tournamentsRef = collection(db, 'tournaments');
+    // Simplified query that doesn't require composite index
+    const q = query(tournamentsRef, orderBy('date', 'asc'));
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const tournamentsData = [];
       snapshot.forEach((doc) => {
-        tournamentsData.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        // Filter status client-side instead
+        if (data.status === 'upcoming' || data.status === 'active') {
+          const isRegistered = data.registeredPlayers?.some(
+            player => player.uid === user?.uid
+          );
+          tournamentsData.push({
+            id: doc.id,
+            ...data,
+            isRegistered,
+          });
+        }
       });
       setTournaments(tournamentsData);
+      setRegisteredTournaments(tournamentsData.filter(t => t.isRegistered));
+      setLoading(false);
     }, (error) => {
       console.error('Error fetching tournaments:', error);
-      setSnackbar({
-        open: true,
-        message: 'Error fetching tournaments',
-        severity: 'error',
-      });
+      setError('Error loading tournaments');
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
-  const handleRegister = async (tournament) => {
-    // Check if user is logged in
-    if (!user) {
-      setSnackbar({
-        open: true,
-        message: 'Please login to register for tournaments',
-        severity: 'error',
-      });
-      return;
-    }
-
-    setSelectedTournament(tournament);
-
-    // Check if user has already registered
-    if (tournament.participants?.includes(user.uid)) {
-      setSnackbar({
-        open: true,
-        message: 'You are already registered for this tournament',
-        severity: 'warning',
-      });
-      return;
-    }
-
-    // Get user's game ID from profile
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-      const userData = userDoc.data();
-      const gameIds = userData?.gameIds || {};
-      const gameType = tournament.gameType?.toLowerCase().replace(/\s+/g, '') || '';
-      const savedGameId = gameIds[gameType];
-
-      if (savedGameId) {
-        setGameId(savedGameId);
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-
-    setOpenDialog(true);
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
   };
 
-  const handleConfirmRegistration = async () => {
-    if (!selectedTournament || !user) return;
+  const handleSearch = (event) => {
+    setSearchQuery(event.target.value.toLowerCase());
+  };
 
-    setLoading(true);
-    try {
-      // For paid tournaments, check wallet balance
-      if (selectedTournament.type === 'paid') {
-        const walletRef = doc(db, 'wallets', user.uid);
-        const walletDoc = await getDoc(walletRef);
-        
-        if (!walletDoc.exists()) {
-          throw new Error('Wallet not found. Please add money to your wallet first.');
-        }
-
-        const currentBalance = walletDoc.data().balance || 0;
-        if (currentBalance < selectedTournament.entryFee) {
-          throw new Error(`Insufficient balance. You need ₹${selectedTournament.entryFee} to register.`);
-        }
-
-        // Deduct entry fee from wallet
-        const newTransaction = {
-          amount: selectedTournament.entryFee,
-          type: 'tournament_fee',
-          status: 'completed',
-          date: new Date(),
-          details: `Entry fee for ${selectedTournament.name}`,
-          tournamentId: selectedTournament.id,
-        };
-
-        await updateDoc(walletRef, {
-          balance: increment(-selectedTournament.entryFee),
-          transactions: [...(walletDoc.data().transactions || []), newTransaction],
-        });
-      }
-
-      // Update user's game ID if changed
-      const userRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-      const userData = userDoc.data() || {};
-      
-      // Map game type to gameIds field
-      const gameTypeMap = {
-        'bgmi': 'bgmi',
-        'freefire': 'freeFire',
-        'codmobile': 'codm',
-        'valorant': 'valorant'
-      };
-      
-      const gameType = gameTypeMap[selectedTournament.gameType?.toLowerCase().replace(/\s+/g, '')] || '';
-      
-      if (!gameType) {
-        throw new Error('Invalid game type');
-      }
-
-      // Update user profile if game ID changed
-      if (gameId && gameId !== userData.gameIds?.[gameType]) {
-        const updates = {
-          ...userData,
-          gameIds: {
-            ...(userData.gameIds || {}),
-            [gameType]: gameId
-          },
-          updatedAt: new Date()
-        };
-        await updateDoc(userRef, updates);
-      }
-
-      // Register for tournament
-      const tournamentRef = doc(db, 'tournaments', selectedTournament.id);
-      const participantData = {
-        gameId: gameId,
-        registeredAt: new Date(),
-        name: userData.name || user.email,
-        email: user.email,
-        userId: user.uid
-      };
-
-      await updateDoc(tournamentRef, {
-        participants: [...(selectedTournament.participants || []), user.uid],
-        [`participantDetails.${user.uid}`]: participantData
-      });
-
-      setSnackbar({
-        open: true,
-        message: 'Successfully registered for tournament',
-        severity: 'success',
-      });
-    } catch (error) {
-      console.error('Error registering for tournament:', error);
-      setSnackbar({
-        open: true,
-        message: error.message || 'Error registering for tournament',
-        severity: 'error',
-      });
-    } finally {
-      setLoading(false);
-      setOpenDialog(false);
-      setGameId('');
-      setSelectedTournament(null);
-    }
+  const handleJoin = (tournament) => {
+    setSelectedTournament(tournament);
+    setOpenRegistration(true);
   };
 
   const handleViewDetails = (tournament) => {
-    navigate(`/tournament/${tournament.id}`);
+    setSelectedTournament(tournament);
+    setOpenDetails(true);
   };
 
-  const formatDate = (date) => {
-    if (!date) return 'N/A';
-    return new Date(date.seconds * 1000).toLocaleString();
+  const filterTournaments = (tournaments) => {
+    return tournaments.filter(tournament =>
+      tournament.title.toLowerCase().includes(searchQuery) ||
+      tournament.gameType.toLowerCase().includes(searchQuery)
+    );
   };
+
+  const TournamentsList = ({ tournaments }) => (
+    <Grid container spacing={3}>
+      {tournaments.length === 0 ? (
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="h6" color="text.secondary">
+              No tournaments found
+            </Typography>
+          </Paper>
+        </Grid>
+      ) : (
+        filterTournaments(tournaments).map((tournament) => (
+          <Grid item xs={12} sm={6} md={4} key={tournament.id}>
+            <TournamentCard
+              tournament={tournament}
+              onJoin={handleJoin}
+              onView={handleViewDetails}
+              isJoined={tournament.isRegistered}
+            />
+          </Grid>
+        ))
+      )}
+    </Grid>
+  );
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Tournaments
-      </Typography>
-      <Grid container spacing={3}>
-        {tournaments.map((tournament) => (
-          <Grid item xs={12} sm={6} md={4} key={tournament.id}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {tournament.name}
-                </Typography>
-                <Typography color="textSecondary" gutterBottom>
-                  {tournament.gameType}
-                </Typography>
-                <Typography variant="body2">
-                  Prize Pool: ₹{tournament.prizePool}
-                </Typography>
-                <Typography variant="body2">
-                  Entry Fee: {tournament.type === 'free' ? 'Free' : `₹${tournament.entryFee}`}
-                </Typography>
-                <Typography variant="body2">
-                  Date: {formatDate(tournament.startDate)}
-                </Typography>
-                <Box sx={{ mt: 1 }}>
-                  <Chip
-                    label={`${tournament.participants?.length || 0}/${tournament.maxParticipants} Players`}
-                    color="primary"
-                    size="small"
-                    sx={{ mr: 1 }}
-                  />
-                  <Chip
-                    label={tournament.status}
-                    color={
-                      tournament.status === 'upcoming'
-                        ? 'warning'
-                        : tournament.status === 'live'
-                        ? 'success'
-                        : 'error'
-                    }
-                    size="small"
-                  />
-                </Box>
-              </CardContent>
-              <CardActions>
-                <Button
-                  size="small"
-                  color="primary"
-                  onClick={() => handleViewDetails(tournament)}
-                >
-                  View Details
-                </Button>
-                {tournament.status === 'upcoming' && (
-                  <Button
-                    size="small"
-                    color="secondary"
-                    onClick={() => handleRegister(tournament)}
-                    disabled={loading || tournament.participants?.includes(user?.uid)}
-                  >
-                    {tournament.participants?.includes(user?.uid)
-                      ? 'Registered'
-                      : 'Register Now'}
-                  </Button>
-                )}
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Registration Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Tournament Registration</DialogTitle>
-        <DialogContent>
-          {selectedTournament?.type === 'paid' && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Entry Fee: ₹{selectedTournament?.entryFee}
-            </Alert>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4">
+          Tournaments
+          {registeredTournaments.length > 0 && (
+            <Badge
+              badgeContent={registeredTournaments.length}
+              color="primary"
+              sx={{ ml: 2 }}
+            />
           )}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <TextField
-            fullWidth
-            label={`${selectedTournament?.gameType} Game ID`}
-            value={gameId}
-            onChange={(e) => setGameId(e.target.value)}
-            required
-            sx={{ mt: 1 }}
-            helperText="Enter your in-game player ID"
+            size="small"
+            placeholder="Search tournaments..."
+            value={searchQuery}
+            onChange={handleSearch}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
+            }}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button
-            onClick={handleConfirmRegistration}
-            variant="contained"
-            disabled={loading || !gameId}
-          >
-            {loading ? 'Processing...' : 'Confirm Registration'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          <Tooltip title="Refresh">
+            <IconButton onClick={() => setLoading(true)}>
+              <Refresh />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
 
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={currentTab} onChange={handleTabChange}>
+          <Tab label="All Tournaments" />
+          <Tab
+            label="My Tournaments"
+            icon={registeredTournaments.length > 0 ? <Badge badgeContent={registeredTournaments.length} color="primary" /> : null}
+          />
+        </Tabs>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
         </Alert>
-      </Snackbar>
+      )}
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Box hidden={currentTab !== 0}>
+          <TournamentsList tournaments={tournaments} />
+        </Box>
+      )}
+
+      <Box hidden={currentTab !== 1}>
+        <TournamentsList tournaments={registeredTournaments} />
+      </Box>
+
+      {selectedTournament && (
+        <>
+          <TournamentRegistration
+            open={openRegistration}
+            onClose={() => setOpenRegistration(false)}
+            tournament={selectedTournament}
+          />
+          <TournamentDetails
+            open={openDetails}
+            onClose={() => setOpenDetails(false)}
+            tournament={selectedTournament}
+          />
+        </>
+      )}
     </Container>
   );
 };

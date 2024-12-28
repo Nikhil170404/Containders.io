@@ -1,115 +1,142 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Container,
-  Paper,
-  Typography,
   Grid,
-  Card,
-  CardContent,
-  CardActions,
+  Typography,
+  Box,
   Button,
   TextField,
+  MenuItem,
+  FormControl,
+  FormControlLabel,
+  Switch,
+  Paper,
+  IconButton,
+  Tooltip,
+  Alert,
+  CircularProgress,
+  InputLabel,
+  Select,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
-  Box,
-  useTheme,
-  useMediaQuery,
-  Skeleton,
-  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Chip,
-  Tooltip,
-  Divider,
-  MenuItem,
+  Avatar,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  ListItemSecondaryAction,
+  Collapse,
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  EmojiEvents as TrophyIcon,
-  AccessTime as TimeIcon,
-  Group as ParticipantsIcon,
-  AttachMoney as MoneyIcon,
+  Add,
+  Edit,
+  Delete,
+  Groups,
+  EmojiEvents,
+  ExpandMore,
+  ExpandLess,
+  AccountBalanceWallet,
+  Refresh,
 } from '@mui/icons-material';
-import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, increment, arrayUnion, getDoc } from '../../firebase';
+import {
+  db, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp
+} from '../../firebase';
+import TournamentPrizeDistribution from './TournamentPrizeDistribution';
+import { formatIndianCurrency } from '../../utils/formatters';
 
 const TournamentManagement = () => {
-  const theme = useTheme();
-  // eslint-disable-next-line no-unused-vars
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  // eslint-disable-next-line no-unused-vars
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState(null);
+  const [openPrizeDialog, setOpenPrizeDialog] = useState(false);
+  const [expandedTournament, setExpandedTournament] = useState(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'success',
   });
   const [formData, setFormData] = useState({
-    name: '',
+    title: '',
     description: '',
     date: '',
-    prizePool: 0,
+    prize: 0,
     maxParticipants: 0,
-    gameType: '',
+    teamSize: 'solo',
     entryFee: 0,
-    type: 'free',
-    registrationDeadline: '',
+    status: 'upcoming',
+    gameType: '',
+    rules: '',
+    roomId: '',
+    roomPassword: '',
+    roomInstructions: '',
+    isPrivate: false,
+    requiresVerification: false,
+    autoApprove: true,
   });
-  const [dialogState, setDialogState] = useState({ open: false, title: '', content: null, actions: null });
-  const [winners, setWinners] = useState({ first: '', second: '', third: '' });
 
-  const fetchTournaments = useCallback(async () => {
-    try {
-      setLoading(true);
-      const querySnapshot = await getDocs(collection(db, 'tournaments'));
-      const tournamentsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+  // Real-time tournament updates
+  useEffect(() => {
+    const tournamentsRef = collection(db, 'tournaments');
+    const q = query(tournamentsRef, orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const tournamentsData = [];
+      snapshot.forEach((doc) => {
+        tournamentsData.push({ id: doc.id, ...doc.data() });
+      });
       setTournaments(tournamentsData);
-    } catch (error) {
+      setLoading(false);
+    }, (error) => {
       console.error('Error fetching tournaments:', error);
       setSnackbar({
         open: true,
         message: 'Error fetching tournaments',
         severity: 'error',
       });
-    } finally {
       setLoading(false);
-    }
-  }, []);
+    });
 
-  useEffect(() => {
-    fetchTournaments();
-  }, [fetchTournaments]);
+    return () => unsubscribe();
+  }, []);
 
   const handleOpenDialog = (tournament = null) => {
     if (tournament) {
       setEditMode(true);
       setSelectedTournament(tournament);
-      setFormData(tournament);
+      setFormData({
+        ...tournament,
+        date: tournament.date.split('T')[0],
+      });
     } else {
       setEditMode(false);
       setSelectedTournament(null);
       setFormData({
-        name: '',
+        title: '',
         description: '',
         date: '',
-        prizePool: 0,
+        prize: 0,
         maxParticipants: 0,
-        gameType: '',
+        teamSize: 'solo',
         entryFee: 0,
-        type: 'free',
-        registrationDeadline: '',
+        status: 'upcoming',
+        gameType: '',
+        rules: '',
+        roomId: '',
+        roomPassword: '',
+        roomInstructions: '',
+        isPrivate: false,
+        requiresVerification: false,
+        autoApprove: true,
       });
     }
     setOpenDialog(true);
@@ -121,44 +148,93 @@ const TournamentManagement = () => {
     setSelectedTournament(null);
   };
 
+  const handleInputChange = (e) => {
+    const { name, value, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: e.target.type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const validateForm = () => {
+    const requiredFields = ['title', 'date', 'prize', 'maxParticipants', 'teamSize', 'gameType'];
+    const errors = [];
+
+    requiredFields.forEach(field => {
+      if (!formData[field]) {
+        errors.push(`${field.charAt(0).toUpperCase() + field.slice(1)} is required`);
+      }
+    });
+
+    if (formData.prize < 0) errors.push('Prize must be positive');
+    if (formData.entryFee < 0) errors.push('Entry fee must be positive');
+    if (formData.maxParticipants < 1) errors.push('Maximum participants must be at least 1');
+
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      if (editMode && selectedTournament) {
-        await updateDoc(doc(db, 'tournaments', selectedTournament.id), {
-          ...formData,
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        await addDoc(collection(db, 'tournaments'), {
-          ...formData,
-          status: 'upcoming',
-          participants: [],
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      }
-      handleCloseDialog();
-      fetchTournaments();
+    const errors = validateForm();
+
+    if (errors.length > 0) {
       setSnackbar({
         open: true,
-        message: `Tournament ${editMode ? 'updated' : 'created'} successfully`,
-        severity: 'success',
+        message: errors.join(', '),
+        severity: 'error',
       });
+      return;
+    }
+
+    try {
+      const tournamentData = {
+        ...formData,
+        prize: Number(formData.prize),
+        maxParticipants: Number(formData.maxParticipants),
+        entryFee: Number(formData.entryFee),
+        updatedAt: serverTimestamp(),
+      };
+
+      if (!editMode) {
+        tournamentData.createdAt = serverTimestamp();
+        tournamentData.currentParticipants = 0;
+        tournamentData.registeredPlayers = [];
+      }
+
+      if (editMode && selectedTournament) {
+        await updateDoc(doc(db, 'tournaments', selectedTournament.id), tournamentData);
+        setSnackbar({
+          open: true,
+          message: 'Tournament updated successfully',
+          severity: 'success',
+        });
+      } else {
+        await addDoc(collection(db, 'tournaments'), tournamentData);
+        setSnackbar({
+          open: true,
+          message: 'Tournament created successfully',
+          severity: 'success',
+        });
+      }
+
+      handleCloseDialog();
     } catch (error) {
       console.error('Error saving tournament:', error);
       setSnackbar({
         open: true,
-        message: `Error ${editMode ? 'updating' : 'creating'} tournament`,
+        message: 'Error saving tournament',
         severity: 'error',
       });
     }
   };
 
-  const handleDelete = async (tournamentId) => {
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this tournament?')) {
+      return;
+    }
+
     try {
-      await deleteDoc(doc(db, 'tournaments', tournamentId));
-      fetchTournaments();
+      await deleteDoc(doc(db, 'tournaments', id));
       setSnackbar({
         open: true,
         message: 'Tournament deleted successfully',
@@ -174,463 +250,454 @@ const TournamentManagement = () => {
     }
   };
 
-  const distributePrizes = async (tournament, winners) => {
-    try {
-      const batch = writeBatch(db);
-      const tournamentRef = doc(db, 'tournaments', tournament.id);
-      
-      // Calculate prize distribution
-      const prizeMoney = tournament.prizePool;
-      const prizeDistribution = {
-        first: prizeMoney * 0.5,    // 50% for first place
-        second: prizeMoney * 0.3,   // 30% for second place
-        third: prizeMoney * 0.2,    // 20% for third place
-      };
-
-      // Update tournament status
-      batch.update(tournamentRef, {
-        status: 'completed',
-        winners: winners,
-        prizeDistributed: true,
-        completedAt: serverTimestamp(),
-      });
-
-      // Distribute prizes to winners
-      for (const [place, userId] of Object.entries(winners)) {
-        if (!userId) continue;
-
-        const prizeAmount = prizeDistribution[place];
-        if (!prizeAmount) continue;
-
-        // Update user's wallet
-        const walletRef = doc(db, 'wallets', userId);
-        const walletSnapshot = await getDoc(walletRef);
-        
-        if (!walletSnapshot.exists()) {
-          // Create wallet if it doesn't exist
-          batch.set(walletRef, {
-            balance: prizeAmount,
-            lastUpdated: serverTimestamp(),
-            transactions: [{
-              amount: prizeAmount,
-              type: 'prize',
-              status: 'completed',
-              date: serverTimestamp(),
-              details: `Prize money for ${place} place in ${tournament.name}`,
-              tournamentId: tournament.id,
-            }],
-          });
-        } else {
-          // Update existing wallet
-          batch.update(walletRef, {
-            balance: increment(prizeAmount),
-            lastUpdated: serverTimestamp(),
-            transactions: arrayUnion({
-              amount: prizeAmount,
-              type: 'prize',
-              status: 'completed',
-              date: serverTimestamp(),
-              details: `Prize money for ${place} place in ${tournament.name}`,
-              tournamentId: tournament.id,
-            }),
-          });
-        }
-
-        // Create transaction record
-        const transactionRef = doc(collection(db, 'transactions'));
-        batch.set(transactionRef, {
-          userId: userId,
-          amount: prizeAmount,
-          type: 'prize',
-          status: 'completed',
-          date: serverTimestamp(),
-          details: `Prize money for ${place} place in ${tournament.name}`,
-          tournamentId: tournament.id,
-          category: 'tournament_prize',
-        });
-      }
-
-      // Commit all changes
-      await batch.commit();
-
-      // Refresh tournaments list
-      fetchTournaments();
-
-      setSnackbar({
-        open: true,
-        message: 'Prize money distributed successfully',
-        severity: 'success',
-      });
-    } catch (error) {
-      console.error('Error distributing prizes:', error);
-      setSnackbar({
-        open: true,
-        message: 'Error distributing prize money',
-        severity: 'error',
-      });
-    }
-  };
-
-  const handleDistributePrizes = async (tournament) => {
-    setDialogState({
-      open: true,
-      title: 'Distribute Prize Money',
-      content: (
-        <Box>
+  const renderTournamentForm = () => (
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Tournament Title"
+            name="title"
+            value={formData.title}
+            onChange={handleInputChange}
+            required
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Game Type"
+            name="gameType"
+            value={formData.gameType}
+            onChange={handleInputChange}
+            required
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Description"
+            name="description"
+            value={formData.description}
+            onChange={handleInputChange}
+            multiline
+            rows={3}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            type="date"
+            label="Tournament Date"
+            name="date"
+            value={formData.date}
+            onChange={handleInputChange}
+            InputLabelProps={{ shrink: true }}
+            required
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth>
+            <InputLabel>Team Size</InputLabel>
+            <Select
+              name="teamSize"
+              value={formData.teamSize}
+              onChange={handleInputChange}
+              required
+            >
+              <MenuItem value="solo">Solo</MenuItem>
+              <MenuItem value="duo">Duo</MenuItem>
+              <MenuItem value="squad">Squad</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            type="number"
+            label="Prize Pool"
+            name="prize"
+            value={formData.prize}
+            onChange={handleInputChange}
+            InputProps={{ inputProps: { min: 0 } }}
+            required
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            type="number"
+            label="Entry Fee"
+            name="entryFee"
+            value={formData.entryFee}
+            onChange={handleInputChange}
+            InputProps={{ inputProps: { min: 0 } }}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            type="number"
+            label="Maximum Participants"
+            name="maxParticipants"
+            value={formData.maxParticipants}
+            onChange={handleInputChange}
+            InputProps={{ inputProps: { min: 1 } }}
+            required
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth>
+            <InputLabel>Status</InputLabel>
+            <Select
+              name="status"
+              value={formData.status}
+              onChange={handleInputChange}
+              required
+            >
+              <MenuItem value="upcoming">Upcoming</MenuItem>
+              <MenuItem value="active">Active</MenuItem>
+              <MenuItem value="completed">Completed</MenuItem>
+              <MenuItem value="cancelled">Cancelled</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Tournament Rules"
+            name="rules"
+            value={formData.rules}
+            onChange={handleInputChange}
+            multiline
+            rows={4}
+          />
+        </Grid>
+        <Grid item xs={12}>
           <Typography variant="h6" gutterBottom>
-            Tournament: {tournament.name}
+            Room Details
           </Typography>
-          <Divider sx={{ my: 2 }} />
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <Paper elevation={2} sx={{ p: 2, bgcolor: theme.palette.background.default }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Prize Pool Distribution
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Typography variant="body2">
-                    Total Prize Pool: <strong>₹{tournament.prizePool}</strong>
-                  </Typography>
-                  <Typography variant="body2" color="primary">
-                    First Place: ₹{tournament.prizePool * 0.5}
-                  </Typography>
-                  <Typography variant="body2" color="secondary">
-                    Second Place: ₹{tournament.prizePool * 0.3}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Third Place: ₹{tournament.prizePool * 0.2}
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Paper elevation={2} sx={{ p: 2, bgcolor: theme.palette.background.default }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Winner Details
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="First Place Winner (User ID)"
-                    name="first"
-                    value={winners.first}
-                    onChange={(e) => setWinners({ ...winners, first: e.target.value })}
-                    required
-                    size="small"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Second Place Winner (User ID)"
-                    name="second"
-                    value={winners.second}
-                    onChange={(e) => setWinners({ ...winners, second: e.target.value })}
-                    required
-                    size="small"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Third Place Winner (User ID)"
-                    name="third"
-                    value={winners.third}
-                    onChange={(e) => setWinners({ ...winners, third: e.target.value })}
-                    required
-                    size="small"
-                  />
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Box>
-      ),
-      actions: (
-        <>
-          <Button onClick={() => setDialogState({ ...dialogState, open: false })}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              distributePrizes(tournament, winners);
-              setDialogState({ ...dialogState, open: false });
-            }}
-            color="primary"
-            variant="contained"
-            disabled={!winners.first || !winners.second || !winners.third}
-          >
-            Distribute Prizes
-          </Button>
-        </>
-      ),
-    });
-  };
-
-  const renderTournamentCard = (tournament) => (
-    <Grid item xs={12} sm={6} md={4} key={tournament.id}>
-      <Card 
-        elevation={3}
-        sx={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          transition: 'transform 0.2s',
-          '&:hover': {
-            transform: 'translateY(-4px)',
-          },
-        }}
-      >
-        <CardContent sx={{ flexGrow: 1 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-            <Typography variant="h6" component="div" gutterBottom>
-              {tournament.name}
-            </Typography>
-            <Chip
-              label={tournament.status}
-              color={
-                tournament.status === 'upcoming' ? 'primary' :
-                tournament.status === 'completed' ? 'success' :
-                'default'
-              }
-              size="small"
-            />
-          </Box>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            {tournament.description}
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Room ID"
+            name="roomId"
+            value={formData.roomId}
+            onChange={handleInputChange}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            label="Room Password"
+            name="roomPassword"
+            value={formData.roomPassword}
+            onChange={handleInputChange}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            label="Room Instructions"
+            name="roomInstructions"
+            value={formData.roomInstructions}
+            onChange={handleInputChange}
+            multiline
+            rows={2}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <Typography variant="h6" gutterBottom>
+            Tournament Settings
           </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <TimeIcon color="action" fontSize="small" />
-              <Typography variant="body2">
-                {new Date(tournament.date).toLocaleDateString()}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <MoneyIcon color="action" fontSize="small" />
-              <Typography variant="body2">
-                Prize Pool: ₹{tournament.prizePool}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <ParticipantsIcon color="action" fontSize="small" />
-              <Typography variant="body2">
-                {tournament.participants?.length || 0}/{tournament.maxParticipants} Participants
-              </Typography>
-            </Box>
-          </Box>
-        </CardContent>
-        <CardActions sx={{ justifyContent: 'flex-end', p: 2 }}>
-          <Tooltip title="Edit">
-            <IconButton
-              size="small"
-              onClick={() => handleOpenDialog(tournament)}
-            >
-              <EditIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Delete">
-            <IconButton
-              size="small"
-              onClick={() => handleDelete(tournament.id)}
-              color="error"
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
-          {tournament.status === 'completed' && !tournament.prizeDistributed && (
-            <Tooltip title="Distribute Prizes">
-              <IconButton
-                size="small"
-                onClick={() => handleDistributePrizes(tournament)}
-                color="primary"
-              >
-                <TrophyIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-        </CardActions>
-      </Card>
-    </Grid>
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.isPrivate}
+                onChange={handleInputChange}
+                name="isPrivate"
+              />
+            }
+            label="Private Tournament"
+          />
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.requiresVerification}
+                onChange={handleInputChange}
+                name="requiresVerification"
+              />
+            }
+            label="Require Verification"
+          />
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={formData.autoApprove}
+                onChange={handleInputChange}
+                name="autoApprove"
+              />
+            }
+            label="Auto Approve Teams"
+          />
+        </Grid>
+      </Grid>
+    </Box>
   );
 
+  const renderTournamentList = () => (
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Tournament</TableCell>
+            <TableCell>Game</TableCell>
+            <TableCell>Team Size</TableCell>
+            <TableCell>Entry Fee</TableCell>
+            <TableCell>Prize Pool</TableCell>
+            <TableCell>Status</TableCell>
+            <TableCell>Start Time</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {tournaments.map((tournament) => (
+            <React.Fragment key={tournament.id}>
+              <TableRow>
+                <TableCell>{tournament.title}</TableCell>
+                <TableCell>{tournament.gameType}</TableCell>
+                <TableCell>{tournament.teamSize}</TableCell>
+                <TableCell>{formatIndianCurrency(tournament.entryFee)}</TableCell>
+                <TableCell>{formatIndianCurrency(tournament.prize)}</TableCell>
+                <TableCell>
+                  <Chip 
+                    label={tournament.status} 
+                    color={
+                      tournament.status === 'upcoming' ? 'primary' :
+                      tournament.status === 'active' ? 'warning' :
+                      tournament.status === 'completed' ? 'success' : 'default'
+                    }
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  {new Date(tournament.date).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Tooltip title="Edit Tournament">
+                      <IconButton 
+                        onClick={() => handleOpenDialog(tournament)}
+                        disabled={tournament.status === 'completed'}
+                        size="small"
+                      >
+                        <Edit />
+                      </IconButton>
+                    </Tooltip>
+                    
+                    <Tooltip title="Delete Tournament">
+                      <IconButton 
+                        onClick={() => handleDelete(tournament.id)}
+                        disabled={tournament.status !== 'upcoming'}
+                        size="small"
+                        color="error"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Set Winners & Distribute Prizes">
+                      <IconButton
+                        onClick={() => {
+                          setSelectedTournament(tournament);
+                          setOpenPrizeDialog(true);
+                        }}
+                        disabled={tournament.status !== 'active'}
+                        color="primary"
+                        size="small"
+                      >
+                        <EmojiEvents />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title={expandedTournament === tournament.id ? "Hide Participants" : "Show Participants"}>
+                      <IconButton
+                        onClick={() => setExpandedTournament(expandedTournament === tournament.id ? null : tournament.id)}
+                        size="small"
+                        color="info"
+                      >
+                        {expandedTournament === tournament.id ? <ExpandLess /> : <ExpandMore />}
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </TableCell>
+              </TableRow>
+              
+              <TableRow>
+                <TableCell colSpan={8} style={{ paddingBottom: 0, paddingTop: 0 }}>
+                  <Collapse in={expandedTournament === tournament.id} timeout="auto" unmountOnExit>
+                    <Box sx={{ margin: 2 }}>
+                      <Typography variant="h6" gutterBottom component="div">
+                        Registered Teams
+                      </Typography>
+                      {tournament.registeredPlayers?.length > 0 ? (
+                        <List>
+                          {tournament.registeredPlayers.map((player) => (
+                            <ListItem 
+                              key={player.id}
+                              sx={{ 
+                                bgcolor: 'background.paper',
+                                mb: 1,
+                                borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider'
+                              }}
+                            >
+                              <ListItemAvatar>
+                                <Avatar>
+                                  <Groups />
+                                </Avatar>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="subtitle1">
+                                      {player.displayName}
+                                    </Typography>
+                                    {tournament.teamStatus?.[player.id]?.position && (
+                                      <Chip
+                                        icon={<EmojiEvents />}
+                                        label={`${tournament.teamStatus[player.id].position} Place`}
+                                        color="primary"
+                                        size="small"
+                                      />
+                                    )}
+                                    {tournament.teamStatus?.[player.id]?.prize && (
+                                      <Chip
+                                        icon={<AccountBalanceWallet />}
+                                        label={formatIndianCurrency(tournament.teamStatus[player.id].prize)}
+                                        color="success"
+                                        size="small"
+                                      />
+                                    )}
+                                  </Box>
+                                }
+                                secondary={
+                                  <>
+                                    <Typography variant="body2" color="textSecondary">
+                                      Email: {player.email}
+                                    </Typography>
+                                  </>
+                                }
+                              />
+                              <ListItemSecondaryAction>
+                                <Chip 
+                                  label={tournament.teamStatus?.[player.id]?.status || 'registered'} 
+                                  size="small"
+                                  color={tournament.teamStatus?.[player.id]?.position ? 'success' : 'default'}
+                                />
+                              </ListItemSecondaryAction>
+                            </ListItem>
+                          ))}
+                        </List>
+                      ) : (
+                        <Typography color="textSecondary">
+                          No teams registered yet
+                        </Typography>
+                      )}
+                    </Box>
+                  </Collapse>
+                </TableCell>
+              </TableRow>
+            </React.Fragment>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" component="h1">
-          Tournament Management
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          Add Tournament
-        </Button>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5">Tournament Management</Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => handleOpenDialog()}
+          >
+            Create Tournament
+          </Button>
+          <Tooltip title="Refresh">
+            <IconButton onClick={() => setLoading(true)}>
+              <Refresh />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
-      <Grid container spacing={3}>
-        {loading ? (
-          Array.from({ length: 6 }).map((_, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <Skeleton variant="rectangular" height={300} />
-            </Grid>
-          ))
-        ) : tournaments.length === 0 ? (
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="h6" color="text.secondary">
-                No tournaments found
-              </Typography>
-            </Paper>
-          </Grid>
-        ) : (
-          tournaments.map(tournament => renderTournamentCard(tournament))
-        )}
-      </Grid>
+      {renderTournamentList()}
 
-      {/* Tournament Form Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <form onSubmit={handleSubmit}>
-          <DialogTitle>
-            {editMode ? 'Edit Tournament' : 'Create Tournament'}
-          </DialogTitle>
-          <DialogContent dividers>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Tournament Name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  multiline
-                  rows={3}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  label="Tournament Date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  label="Registration Deadline"
-                  value={formData.registrationDeadline}
-                  onChange={(e) => setFormData({ ...formData, registrationDeadline: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Prize Pool"
-                  value={formData.prizePool}
-                  onChange={(e) => setFormData({ ...formData, prizePool: Number(e.target.value) })}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Max Participants"
-                  value={formData.maxParticipants}
-                  onChange={(e) => setFormData({ ...formData, maxParticipants: Number(e.target.value) })}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Game Type"
-                  value={formData.gameType}
-                  onChange={(e) => setFormData({ ...formData, gameType: e.target.value })}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Entry Fee"
-                  value={formData.entryFee}
-                  onChange={(e) => setFormData({ ...formData, entryFee: Number(e.target.value) })}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Tournament Type"
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  required
-                >
-                  <MenuItem value="free">Free</MenuItem>
-                  <MenuItem value="paid">Paid</MenuItem>
-                </TextField>
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button type="submit" variant="contained" color="primary">
-              {editMode ? 'Update' : 'Create'}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-
-      {/* Prize Distribution Dialog */}
-      <Dialog 
-        open={dialogState.open} 
-        onClose={() => setDialogState({ ...dialogState, open: false })} 
-        maxWidth="md" 
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle>{dialogState.title}</DialogTitle>
+        <DialogTitle>
+          {editMode ? 'Edit Tournament' : 'Create Tournament'}
+        </DialogTitle>
         <DialogContent dividers>
-          {dialogState.content}
+          {renderTournamentForm()}
         </DialogContent>
         <DialogActions>
-          {dialogState.actions}
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            color="primary"
+          >
+            {editMode ? 'Update' : 'Create'}
+          </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+      <TournamentPrizeDistribution
+        open={openPrizeDialog}
+        onClose={() => setOpenPrizeDialog(false)}
+        tournament={selectedTournament}
+      />
+
+      {snackbar.open && (
+        <Alert
           severity={snackbar.severity}
-          variant="filled"
+          sx={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            zIndex: (theme) => theme.zIndex.modal + 1,
+          }}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
         >
           {snackbar.message}
         </Alert>
-      </Snackbar>
-    </Container>
+      )}
+    </Box>
   );
 };
 

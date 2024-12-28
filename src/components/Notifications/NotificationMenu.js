@@ -1,68 +1,128 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import {
   IconButton,
   Badge,
   Menu,
   MenuItem,
-  ListItemIcon,
-  ListItemText,
   Typography,
   Box,
   Divider,
   Button,
-  Tooltip,
 } from '@mui/material';
 import {
-  NotificationsOutlined,
+  Notifications as NotificationsIcon,
   MonetizationOn,
   EmojiEvents,
   SportsEsports,
   Person,
-  AccessTime,
-  Announcement,
   Campaign,
-  Update,
-  LocalOffer,
+  Circle as CircleIcon,
 } from '@mui/icons-material';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { useSelector } from 'react-redux';
 import NotificationService from '../../services/NotificationService';
+import { formatDistanceToNow } from 'date-fns';
 
 const NotificationMenu = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (!user?.uid) return;
 
-    // Query for the 5 most recent notifications
-    const q = query(
-      collection(db, 'notifications'),
-      where('recipientId', '==', user.uid),
-      orderBy('createdAt', 'desc'),
-      limit(5)
-    );
+    console.log('Setting up notification listener for user:', user.uid);
+    setLoading(true);
+    let retryCount = 0;
+    const maxRetries = 3;
+    let retryTimeout;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notificationsList = [];
-      let unread = 0;
+    const setupListener = () => {
+      // Create a compound query
+      const q = query(
+        collection(db, 'notifications'),
+        where('recipientId', '==', user.uid),
+        orderBy('createdAt', 'desc'),
+        limit(10)
+      );
 
-      snapshot.forEach((doc) => {
-        const notification = { id: doc.id, ...doc.data() };
-        notificationsList.push(notification);
-        if (!notification.read) unread++;
-      });
+      try {
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+          console.log('Notification snapshot received:', snapshot.size, 'notifications');
+          const notificationsList = [];
+          let unread = 0;
 
-      setNotifications(notificationsList);
-      setUnreadCount(unread);
-    });
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const notification = {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate() || new Date()
+            };
+            notificationsList.push(notification);
+            if (!notification.read) {
+              unread++;
+            }
+          });
 
-    return () => unsubscribe();
+          console.log('Updated notifications:', notificationsList);
+          console.log('Unread count:', unread);
+
+          setNotifications(notificationsList);
+          setUnreadCount(unread);
+          setLoading(false);
+          setError(null);
+          retryCount = 0; // Reset retry count on success
+        }, (error) => {
+          console.error('Error listening to notifications:', error);
+          setLoading(false);
+          
+          if (error.code === 'failed-precondition' && error.message.includes('index')) {
+            setError('Notification system is being set up. Retrying in a few seconds...');
+            
+            // Retry logic
+            if (retryCount < maxRetries) {
+              retryCount++;
+              console.log(`Retrying in 5 seconds... (Attempt ${retryCount}/${maxRetries})`);
+              retryTimeout = setTimeout(() => {
+                console.log('Retrying notification setup...');
+                setupListener();
+              }, 5000);
+            } else {
+              setError('Unable to load notifications. Please try again later.');
+            }
+          } else {
+            setError('Failed to load notifications. Please try again later.');
+          }
+        });
+
+        return () => {
+          console.log('Cleaning up notification listener');
+          unsubscribe();
+          if (retryTimeout) {
+            clearTimeout(retryTimeout);
+          }
+        };
+      } catch (error) {
+        console.error('Failed to set up notification listener:', error);
+        setLoading(false);
+        setError('Failed to initialize notifications. Please refresh the page.');
+      }
+    };
+
+    setupListener();
+    return () => {
+      console.log('Cleaning up notification listener');
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+    };
   }, [user?.uid]);
 
   const handleClick = (event) => {
@@ -73,7 +133,22 @@ const NotificationMenu = () => {
     setAnchorEl(null);
   };
 
-  const getNotificationIcon = (type) => {
+  const handleNotificationClick = async (notification) => {
+    if (!notification.read) {
+      await NotificationService.markAsRead(notification.id);
+    }
+    handleClose();
+    navigate(notification.url || '/');
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (user?.uid) {
+      await NotificationService.markAllAsRead(user.uid);
+    }
+    handleClose();
+  };
+
+  const getNotificationIcon = (type, senderRole) => {
     switch (type) {
       case 'wallet':
         return <MonetizationOn color="primary" />;
@@ -83,110 +158,68 @@ const NotificationMenu = () => {
         return <SportsEsports color="success" />;
       case 'user':
         return <Person color="info" />;
-      case 'announcement':
-        return <Announcement color="primary" />;
-      case 'update':
-        return <Update color="info" />;
-      case 'alert':
-        return <Campaign color="error" />;
-      case 'promotion':
-        return <LocalOffer color="secondary" />;
+      case 'admin':
+        return senderRole === 'system' ? 
+          <Campaign color="primary" /> : 
+          <Campaign color="error" />;
       default:
-        return <NotificationsOutlined />;
+        return <NotificationsIcon color="action" />;
     }
   };
 
-  const formatTimeAgo = (timestamp) => {
-    if (!timestamp) return '';
-    try {
-      const date = timestamp.toDate();
-      const now = new Date();
-      const diffInSeconds = Math.floor((now - date) / 1000);
-
-      if (diffInSeconds < 60) return 'just now';
-      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-      if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-      if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-      return date.toLocaleDateString();
-    } catch (error) {
-      console.error('Error formatting timestamp:', error);
-      return '';
+  const getNotificationMessage = (notification) => {
+    if (notification.type === 'admin' && notification.senderRole === 'system') {
+      return (
+        <>
+          <Typography variant="subtitle2" sx={{ fontWeight: !notification.read ? 700 : 400 }}>
+            {notification.title}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            {notification.message}
+          </Typography>
+          <Typography variant="caption" color="primary">
+            Original message: "{notification.originalMessage}"
+          </Typography>
+        </>
+      );
     }
-  };
 
-  const handleNotificationClick = async (notification) => {
-    try {
-      // Mark as read
-      if (!notification.read) {
-        await NotificationService.markAsRead(notification.id);
-      }
-
-      // Navigate based on type
-      switch (notification.type) {
-        case 'wallet':
-          navigate('/wallet');
-          break;
-        case 'tournament':
-          navigate('/tournaments');
-          break;
-        case 'game':
-          navigate('/game-center');
-          break;
-        default:
-          navigate('/notifications');
-      }
-
-      handleClose();
-    } catch (error) {
-      console.error('Error handling notification click:', error);
-    }
-  };
-
-  const handleViewAll = () => {
-    navigate('/notifications');
-    handleClose();
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      const promises = notifications
-        .filter(n => !n.read)
-        .map(n => NotificationService.markAsRead(n.id));
-      await Promise.all(promises);
-      handleClose();
-    } catch (error) {
-      console.error('Error marking all as read:', error);
-    }
+    return (
+      <>
+        <Typography variant="subtitle2" sx={{ fontWeight: !notification.read ? 700 : 400 }}>
+          {notification.title}
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          {notification.message}
+        </Typography>
+      </>
+    );
   };
 
   return (
     <>
-      <Tooltip title="Notifications">
-        <IconButton color="inherit" onClick={handleClick}>
-          <Badge badgeContent={unreadCount} color="error">
-            <NotificationsOutlined />
-          </Badge>
-        </IconButton>
-      </Tooltip>
-
+      <IconButton
+        color="inherit"
+        onClick={handleClick}
+        aria-label={`${unreadCount} new notifications`}
+      >
+        <Badge badgeContent={unreadCount} color="error">
+          <NotificationsIcon />
+        </Badge>
+      </IconButton>
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleClose}
         PaperProps={{
-          sx: {
-            width: 360,
-            maxHeight: '80vh',
-            mt: 1.5,
+          style: {
+            maxHeight: 400,
+            width: '350px',
           },
         }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
-            Notifications {unreadCount > 0 && `(${unreadCount})`}
-          </Typography>
+          <Typography variant="h6">Notifications</Typography>
           {unreadCount > 0 && (
             <Button size="small" onClick={handleMarkAllAsRead}>
               Mark all as read
@@ -194,67 +227,59 @@ const NotificationMenu = () => {
           )}
         </Box>
         <Divider />
-
-        {notifications.length === 0 ? (
-          <Box sx={{ p: 2, textAlign: 'center' }}>
-            <Typography color="text.secondary">
-              No notifications
+        {error ? (
+          <MenuItem disabled>
+            <Typography variant="body2" color="textSecondary">
+              {error}
             </Typography>
-          </Box>
+          </MenuItem>
+        ) : notifications.length === 0 ? (
+          <MenuItem disabled>
+            <Typography variant="body2" color="textSecondary">
+              {loading ? 'Loading notifications...' : 'No notifications'}
+            </Typography>
+          </MenuItem>
         ) : (
-          <>
-            {notifications.map((notification) => (
-              <MenuItem
-                key={notification.id}
-                onClick={() => handleNotificationClick(notification)}
-                sx={{
-                  py: 1.5,
-                  px: 2,
-                  bgcolor: notification.read ? 'transparent' : 'action.hover',
-                  '&:hover': {
-                    bgcolor: 'action.selected',
-                  },
-                }}
-              >
-                <ListItemIcon>
-                  {getNotificationIcon(notification.type)}
-                </ListItemIcon>
-                <ListItemText
-                  primary={notification.title}
-                  secondary={
-                    <Box component="span" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                      {notification.message}
-                      <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <AccessTime sx={{ fontSize: 12 }} />
-                        <Typography variant="caption" color="text.secondary">
-                          {formatTimeAgo(notification.createdAt)}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  }
-                  secondaryTypographyProps={{
-                    sx: {
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }
-                  }}
-                />
-              </MenuItem>
-            ))}
-            <Divider />
-            <Box sx={{ p: 1 }}>
-              <Button
-                fullWidth
-                onClick={handleViewAll}
-                color="primary"
-              >
-                View All Notifications
-              </Button>
-            </Box>
-          </>
+          notifications.map((notification) => (
+            <MenuItem
+              key={notification.id}
+              onClick={() => handleNotificationClick(notification)}
+              sx={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                py: 1.5,
+                px: 2,
+                borderLeft: !notification.read ? '4px solid #1976d2' : 'none',
+                backgroundColor: !notification.read ? 'action.hover' : 'inherit',
+              }}
+            >
+              <Box sx={{ mr: 2, mt: 0.5 }}>
+                {getNotificationIcon(notification.type, notification.senderRole)}
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                {getNotificationMessage(notification)}
+                <Typography variant="caption" color="textSecondary" display="block">
+                  {notification.createdAt ? formatDistanceToNow(notification.createdAt, { addSuffix: true }) : 'Just now'}
+                </Typography>
+              </Box>
+              {!notification.read && (
+                <CircleIcon sx={{ fontSize: 8, color: 'primary.main', ml: 1, mt: 1 }} />
+              )}
+            </MenuItem>
+          ))
+        )}
+        {notifications.length > 0 && (
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Button
+              size="small"
+              onClick={() => {
+                handleClose();
+                navigate('/notifications');
+              }}
+            >
+              View All
+            </Button>
+          </Box>
         )}
       </Menu>
     </>

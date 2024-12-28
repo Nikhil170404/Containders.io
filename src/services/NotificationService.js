@@ -1,4 +1,4 @@
-import { db, doc, collection, setDoc, serverTimestamp, deleteDoc, updateDoc, getDocs } from '../firebase';
+import { db, doc, collection, setDoc, serverTimestamp, deleteDoc, updateDoc, getDocs, query, where, orderBy } from '../firebase';
 
 class NotificationService {
   static swRegistration = null;
@@ -10,37 +10,20 @@ class NotificationService {
     }
 
     try {
-      // Unregister any existing service workers first
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        await registration.unregister();
-      }
-
-      // Register new service worker
       const registration = await navigator.serviceWorker.register('/serviceWorker.js', {
         scope: '/',
-        type: 'module',
-        updateViaCache: 'none'
       });
 
-      // Wait for the service worker to be activated
-      await navigator.serviceWorker.ready;
-      
-      this.swRegistration = registration;
-      console.log('Service Worker registered successfully');
+      NotificationService.swRegistration = registration;
       return true;
     } catch (error) {
-      console.error('Service Worker registration failed:', error);
+      console.error('Error registering service worker:', error);
       return false;
     }
   }
 
   static async requestPermission() {
     try {
-      // Register service worker first
-      await this.registerServiceWorker();
-
-      // Request notification permission
       const permission = await Notification.requestPermission();
       return permission === 'granted';
     } catch (error) {
@@ -49,55 +32,47 @@ class NotificationService {
     }
   }
 
+  static async getNotifications(userId) {
+    try {
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(
+        notificationsRef,
+        where('recipientId', '==', userId),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return [];
+    }
+  }
+
   static async createNotification(userId, title, message, type, soundType = 'default') {
     try {
-      // Create notification in database
-      const notificationRef = doc(collection(db, 'notifications'));
-      await setDoc(notificationRef, {
+      const notificationsRef = collection(db, 'notifications');
+      const notificationData = {
         recipientId: userId,
         title,
         message,
         type,
-        read: false,
+        soundType,
         createdAt: serverTimestamp(),
-      });
+        read: false,
+        url: this.getNotificationUrl(type)
+      };
 
-      // Show browser notification if permission is granted and service worker is registered
-      if (Notification.permission === 'granted' && this.swRegistration) {
-        const options = {
-          body: message,
-          icon: `/icons/${type}.png`,
-          badge: `/icons/${type}.png`,
-          vibrate: [200, 100, 200],
-          tag: type, // Group similar notifications
-          renotify: true, // Show each notification separately even with same tag
-          data: {
-            type,
-            url: this.getNotificationUrl(type),
-            timestamp: Date.now(),
-          },
-          actions: [
-            {
-              action: 'view',
-              title: 'View',
-            },
-            {
-              action: 'close',
-              title: 'Close',
-            },
-          ],
-          // Add custom styling
-          dir: 'auto',
-          requireInteraction: true,
-        };
-
-        await this.swRegistration.showNotification(title, options);
-      }
-
-      return true;
+      console.log('Creating notification:', notificationData);
+      const docRef = doc(notificationsRef);
+      await setDoc(docRef, notificationData);
+      console.log('Notification created with ID:', docRef.id);
+      return docRef.id;
     } catch (error) {
       console.error('Error creating notification:', error);
-      return false;
+      throw error;
     }
   }
 
@@ -108,19 +83,19 @@ class NotificationService {
       case 'tournament':
         return '/tournaments';
       case 'game':
-        return '/game-center';
+        return '/games';
       case 'user':
         return '/profile';
+      case 'admin':
+        return '/admin';
       default:
         return '/';
     }
   }
 
   static async sendWalletNotification(userId, type, amount, status) {
-    const title = `💰 Wallet ${type} ${status}`;
-    const message = `Your ${type} request for $${amount} has been ${status}. ${
-      status === 'approved' ? '✅' : '❌'
-    }`;
+    const title = `💰 Wallet ${type}`;
+    const message = `Your ${type} of $${amount} has been ${status}`;
     return this.createNotification(userId, title, message, 'wallet');
   }
 
@@ -142,6 +117,20 @@ class NotificationService {
     return this.createNotification(userId, title, message, 'user');
   }
 
+  static async markAsRead(notificationId) {
+    try {
+      const notificationRef = doc(db, 'notifications', notificationId);
+      await updateDoc(notificationRef, {
+        read: true,
+        readAt: serverTimestamp()
+      });
+      return true;
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      return false;
+    }
+  }
+
   static async deleteNotification(notificationId) {
     try {
       const notificationRef = doc(db, 'notifications', notificationId);
@@ -156,10 +145,7 @@ class NotificationService {
   static async updateNotification(notificationId, updates) {
     try {
       const notificationRef = doc(db, 'notifications', notificationId);
-      await updateDoc(notificationRef, {
-        ...updates,
-        updatedAt: serverTimestamp(),
-      });
+      await updateDoc(notificationRef, updates);
       return true;
     } catch (error) {
       console.error('Error updating notification:', error);
@@ -167,44 +153,131 @@ class NotificationService {
     }
   }
 
-  static async markAsRead(notificationId) {
+  static async sendAdminNotification(title, message, type = 'announcement', priority = 'normal') {
     try {
-      const notificationRef = doc(db, 'notifications', notificationId);
-      await updateDoc(notificationRef, {
-        read: true,
-        readAt: serverTimestamp(),
+      // Get all users
+      const usersRef = collection(db, 'users');
+      const snapshot = await getDocs(usersRef);
+      const userCount = snapshot.size;
+      
+      const notifications = [];
+      const adminLogRef = doc(collection(db, 'adminNotificationLogs'));
+      
+      // Create admin notification log
+      const adminLogData = {
+        title: `📢 ${title}`,
+        message,
+        type: 'admin',
+        priority,
+        createdAt: serverTimestamp(),
+        totalRecipients: userCount,
+        status: 'sending'
+      };
+      
+      // Save the admin notification log
+      await setDoc(adminLogRef, adminLogData);
+      
+      // Create notifications for all users
+      for (const userDoc of snapshot.docs) {
+        const userId = userDoc.id;
+        const notificationsRef = collection(db, 'notifications');
+        
+        const notificationData = {
+          recipientId: userId,
+          title: `📢 ${title}`,
+          message,
+          type: 'admin',
+          soundType: priority === 'high' ? 'alert' : 'default',
+          createdAt: serverTimestamp(),
+          read: false,
+          url: '/notifications',
+          priority,
+          senderRole: 'admin',
+          adminLogId: adminLogRef.id
+        };
+
+        const notificationRef = doc(notificationsRef);
+        notifications.push(setDoc(notificationRef, notificationData));
+      }
+
+      // Wait for all notifications to be created
+      await Promise.all(notifications);
+      
+      // Update admin log status to completed
+      await updateDoc(adminLogRef, {
+        status: 'completed',
+        completedAt: serverTimestamp()
       });
+
+      // Create a single notification for admin to show the summary
+      const adminSummaryNotification = {
+        recipientId: 'admin',
+        title: '📊 Admin Notification Summary',
+        message: `Successfully sent "${title}" to ${userCount} users`,
+        type: 'admin',
+        soundType: 'default',
+        createdAt: serverTimestamp(),
+        read: false,
+        url: '/admin/notifications',
+        priority: 'normal',
+        senderRole: 'system',
+        adminLogId: adminLogRef.id,
+        userCount: userCount,
+        originalTitle: title,
+        originalMessage: message
+      };
+
+      await setDoc(doc(collection(db, 'notifications')), adminSummaryNotification);
+
+      return {
+        success: true,
+        adminLogId: adminLogRef.id,
+        recipientCount: userCount
+      };
+    } catch (error) {
+      console.error('Error sending admin notification:', error);
+      throw error;
+    }
+  }
+
+  static async markAllAsRead(userId) {
+    try {
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(
+        notificationsRef,
+        where('recipientId', '==', userId),
+        where('read', '==', false)
+      );
+      const snapshot = await getDocs(q);
+      
+      const updates = snapshot.docs.map(async (doc) => {
+        await updateDoc(doc.ref, {
+          read: true,
+          readAt: serverTimestamp()
+        });
+      });
+
+      await Promise.all(updates);
       return true;
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error('Error marking all notifications as read:', error);
       return false;
     }
   }
 
-  static async sendAdminNotification(title, message, type = 'announcement', priority = 'normal') {
+  static async getUnreadCount(userId) {
     try {
-      // Get all users
-      const usersSnapshot = await getDocs(collection(db, 'users'));
-      const sendPromises = [];
-
-      usersSnapshot.forEach((userDoc) => {
-        const userId = userDoc.id;
-        sendPromises.push(
-          this.createNotification(
-            userId,
-            title,
-            message,
-            'admin',
-            priority
-          )
-        );
-      });
-
-      await Promise.all(sendPromises);
-      return true;
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(
+        notificationsRef,
+        where('recipientId', '==', userId),
+        where('read', '==', false)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.size;
     } catch (error) {
-      console.error('Error sending admin notifications:', error);
-      return false;
+      console.error('Error getting unread count:', error);
+      return 0;
     }
   }
 }
