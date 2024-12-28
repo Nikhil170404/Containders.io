@@ -97,7 +97,7 @@ function App() {
     <ThemeProvider theme={gameTheme}>
       <CssBaseline />
       <NotificationProvider>
-        <Router basename="/Containders.io">
+        <Router basename="/your-github-repo-name">
           <NotificationPermission />
           <Box sx={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
             <Navbar />
