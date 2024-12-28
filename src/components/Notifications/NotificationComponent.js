@@ -8,24 +8,27 @@ import {
   ListItemText,
   ListItemIcon,
   Typography,
-  Button,
   Box,
   Divider,
+  Button,
+  Tooltip,
 } from '@mui/material';
 import {
-  Notifications as NotificationsIcon,
-  Circle as CircleIcon,
-  AccountBalanceWallet as WalletIcon,
-  EmojiEvents as TournamentIcon,
-  SportsEsports as GameIcon,
-  Person as UserIcon,
+  NotificationsOutlined,
+  MonetizationOn,
+  EmojiEvents,
+  SportsEsports,
+  Person,
+  AccessTime,
 } from '@mui/icons-material';
-import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import { useNotifications } from '../../context/NotificationContext';
+import useAdmin from '../../hooks/useAdmin';
 
 const NotificationComponent = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
 
   const handleClick = (event) => {
@@ -39,15 +42,30 @@ const NotificationComponent = () => {
   const getNotificationIcon = (type) => {
     switch (type) {
       case 'wallet':
-        return <WalletIcon />;
+        return <MonetizationOn color="primary" />;
       case 'tournament':
-        return <TournamentIcon />;
+        return <EmojiEvents color="secondary" />;
       case 'game':
-        return <GameIcon />;
+        return <SportsEsports color="success" />;
       case 'user':
-        return <UserIcon />;
+        return <Person color="info" />;
       default:
-        return <CircleIcon />;
+        return <NotificationsOutlined />;
+    }
+  };
+
+  const getNotificationAction = (notification) => {
+    switch (notification.type) {
+      case 'wallet':
+        return isAdmin ? '/admin/wallet-requests' : '/wallet';
+      case 'tournament':
+        return isAdmin ? '/admin/tournaments' : '/tournaments';
+      case 'game':
+        return isAdmin ? '/admin/games' : '/game-center';
+      case 'user':
+        return isAdmin ? '/admin/users' : '/profile';
+      default:
+        return '/';
     }
   };
 
@@ -55,132 +73,205 @@ const NotificationComponent = () => {
     if (!notification.read) {
       await markAsRead(notification.id);
     }
-
-    // Navigate based on notification type
-    switch (notification.type) {
-      case 'wallet':
-        navigate('/admin/wallet-requests');
-        break;
-      case 'tournament':
-        navigate('/admin/tournaments');
-        break;
-      case 'game':
-        navigate('/admin/games');
-        break;
-      case 'user':
-        navigate('/admin/users');
-        break;
-      default:
-        if (notification.link) {
-          navigate(notification.link);
-        }
-    }
+    navigate(getNotificationAction(notification));
     handleClose();
   };
 
-  const formatTimestamp = (timestamp) => {
+  const getTimeAgo = (timestamp) => {
     if (!timestamp) return '';
-    const date = timestamp.toDate();
-    const now = new Date();
-    const diff = now - date;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+    try {
+      const date = timestamp.toDate();
+      const now = new Date();
+      const diffInSeconds = Math.floor((now - date) / 1000);
 
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
+      if (diffInSeconds < 60) {
+        return 'just now';
+      }
+
+      const diffInMinutes = Math.floor(diffInSeconds / 60);
+      if (diffInMinutes < 60) {
+        return `${diffInMinutes}m ago`;
+      }
+
+      const diffInHours = Math.floor(diffInMinutes / 60);
+      if (diffInHours < 24) {
+        return `${diffInHours}h ago`;
+      }
+
+      const diffInDays = Math.floor(diffInHours / 24);
+      if (diffInDays < 7) {
+        return `${diffInDays}d ago`;
+      }
+
+      const diffInWeeks = Math.floor(diffInDays / 7);
+      if (diffInWeeks < 4) {
+        return `${diffInWeeks}w ago`;
+      }
+
+      const diffInMonths = Math.floor(diffInDays / 30);
+      if (diffInMonths < 12) {
+        return `${diffInMonths}mo ago`;
+      }
+
+      const diffInYears = Math.floor(diffInDays / 365);
+      return `${diffInYears}y ago`;
+    } catch (error) {
+      console.error('Error formatting timestamp:', error);
+      return '';
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'approved':
+        return 'success.main';
+      case 'rejected':
+        return 'error.main';
+      case 'pending':
+        return 'warning.main';
+      default:
+        return 'text.primary';
+    }
   };
 
   return (
     <>
-      <IconButton color="inherit" onClick={handleClick}>
-        <Badge badgeContent={unreadCount} color="error">
-          <NotificationsIcon />
-        </Badge>
-      </IconButton>
+      <Tooltip title="Notifications">
+        <IconButton
+          color="inherit"
+          onClick={handleClick}
+          sx={{ mr: 2 }}
+        >
+          <Badge badgeContent={unreadCount} color="error">
+            <NotificationsOutlined />
+          </Badge>
+        </IconButton>
+      </Tooltip>
+
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleClose}
         PaperProps={{
-          style: {
-            maxHeight: '400px',
-            width: '350px',
+          sx: {
+            maxHeight: '80vh',
+            width: '360px',
+            overflowX: 'hidden',
           },
         }}
       >
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">Notifications</Typography>
-          {unreadCount > 0 && (
-            <Button size="small" onClick={markAllAsRead}>
-              Mark all as read
+          <Typography variant="h6">
+            Notifications {unreadCount > 0 && `(${unreadCount})`}
+          </Typography>
+          <Box>
+            {unreadCount > 0 && (
+              <Button size="small" onClick={markAllAsRead} sx={{ mr: 1 }}>
+                Mark all as read
+              </Button>
+            )}
+            <Button
+              size="small"
+              color="primary"
+              onClick={() => {
+                navigate('/notifications');
+                handleClose();
+              }}
+            >
+              View All
             </Button>
-          )}
+          </Box>
         </Box>
         <Divider />
-        <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
-          {notifications.length > 0 ? (
-            notifications.map((notification) => (
-              <ListItem
-                key={notification.id}
-                onClick={() => handleNotificationClick(notification)}
-                sx={{
-                  cursor: 'pointer',
-                  bgcolor: notification.read ? 'transparent' : 'action.hover',
-                  '&:hover': {
-                    bgcolor: 'action.selected',
-                  },
-                }}
-              >
-                <ListItemIcon>
-                  {getNotificationIcon(notification.type)}
-                </ListItemIcon>
-                <ListItemText
-                  primary={notification.title}
-                  secondary={
-                    <React.Fragment>
-                      <Typography
-                        component="span"
-                        variant="body2"
-                        color="text.primary"
-                      >
-                        {notification.message}
+        
+        {notifications.length === 0 ? (
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Typography color="textSecondary">
+              No notifications
+            </Typography>
+          </Box>
+        ) : (
+          <List sx={{ p: 0 }}>
+            {notifications.map((notification) => (
+              <React.Fragment key={notification.id}>
+                <ListItem
+                  button
+                  onClick={() => handleNotificationClick(notification)}
+                  sx={{
+                    backgroundColor: notification.read ? 'transparent' : 'action.hover',
+                    '&:hover': {
+                      backgroundColor: 'action.selected',
+                    },
+                  }}
+                >
+                  <ListItemIcon>
+                    {getNotificationIcon(notification.type)}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={
+                      <Typography variant="subtitle2" component="div">
+                        {notification.title}
                       </Typography>
-                      <br />
-                      <Typography
-                        component="span"
-                        variant="caption"
-                        color="text.secondary"
-                      >
-                        {formatTimestamp(notification.createdAt)}
-                      </Typography>
-                    </React.Fragment>
-                  }
-                />
-                {!notification.read && (
-                  <CircleIcon
-                    sx={{
-                      color: 'primary.main',
-                      fontSize: 12,
-                      ml: 1,
-                    }}
+                    }
+                    secondary={
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {notification.message}
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            mt: 0.5,
+                            gap: 1,
+                          }}
+                        >
+                          <AccessTime sx={{ fontSize: 14 }} />
+                          <Typography variant="caption" color="text.secondary">
+                            {getTimeAgo(notification.createdAt)}
+                          </Typography>
+                          {notification.status && (
+                            <>
+                              <Box
+                                component="span"
+                                sx={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  backgroundColor: getStatusColor(notification.status),
+                                  display: 'inline-block',
+                                  ml: 1,
+                                }}
+                              />
+                              <Typography
+                                variant="caption"
+                                sx={{ color: getStatusColor(notification.status) }}
+                              >
+                                {notification.status}
+                              </Typography>
+                            </>
+                          )}
+                        </Box>
+                      </Box>
+                    }
                   />
-                )}
-              </ListItem>
-            ))
-          ) : (
-            <ListItem>
-              <ListItemText
-                primary={
-                  <Typography align="center" color="text.secondary">
-                    No notifications
-                  </Typography>
-                }
-              />
-            </ListItem>
-          )}
-        </List>
+                  {!notification.read && (
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: 'primary.main',
+                        ml: 1,
+                      }}
+                    />
+                  )}
+                </ListItem>
+                <Divider component="li" />
+              </React.Fragment>
+            ))}
+          </List>
+        )}
       </Menu>
     </>
   );

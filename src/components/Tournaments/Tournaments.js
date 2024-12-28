@@ -15,9 +15,11 @@ import {
   TextField,
   Alert,
   Snackbar,
+  Box,
 } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { db, doc, collection, query, updateDoc, getDoc, increment, onSnapshot } from '../../firebase';
+import { useNavigate } from 'react-router-dom';
 
 const Tournaments = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -31,6 +33,7 @@ const Tournaments = () => {
     severity: 'success',
   });
   const { user } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
 
   // Add real-time tournament updates
   useEffect(() => {
@@ -197,66 +200,80 @@ const Tournaments = () => {
     }
   };
 
+  const handleViewDetails = (tournament) => {
+    navigate(`/tournament/${tournament.id}`);
+  };
+
   const formatDate = (date) => {
     if (!date) return 'N/A';
     return new Date(date.seconds * 1000).toLocaleString();
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
       <Typography variant="h4" gutterBottom>
         Tournaments
       </Typography>
       <Grid container spacing={3}>
         {tournaments.map((tournament) => (
-          <Grid item xs={12} md={6} lg={4} key={tournament.id}>
+          <Grid item xs={12} sm={6} md={4} key={tournament.id}>
             <Card>
               <CardContent>
-                <Typography variant="h5" gutterBottom>
+                <Typography variant="h6" gutterBottom>
                   {tournament.name}
                 </Typography>
                 <Typography color="textSecondary" gutterBottom>
                   {tournament.gameType}
                 </Typography>
-                <Typography variant="body2" paragraph>
-                  {tournament.description}
+                <Typography variant="body2">
+                  Prize Pool: ₹{tournament.prizePool}
                 </Typography>
-                <Grid container spacing={1}>
-                  <Grid item xs={12}>
-                    <Chip
-                      label={tournament.type === 'paid' ? `Entry Fee: ₹${tournament.entryFee}` : 'Free Entry'}
-                      color={tournament.type === 'paid' ? 'primary' : 'success'}
-                      size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="body2">
-                      Start Date: {formatDate(tournament.startDate)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="body2">
-                      Registration Deadline: {formatDate(tournament.registrationDeadline)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="body2">
-                      Participants: {tournament.participants?.length || 0}
-                    </Typography>
-                  </Grid>
-                </Grid>
+                <Typography variant="body2">
+                  Entry Fee: {tournament.type === 'free' ? 'Free' : `₹${tournament.entryFee}`}
+                </Typography>
+                <Typography variant="body2">
+                  Date: {formatDate(tournament.startDate)}
+                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <Chip
+                    label={`${tournament.participants?.length || 0}/${tournament.maxParticipants} Players`}
+                    color="primary"
+                    size="small"
+                    sx={{ mr: 1 }}
+                  />
+                  <Chip
+                    label={tournament.status}
+                    color={
+                      tournament.status === 'upcoming'
+                        ? 'warning'
+                        : tournament.status === 'live'
+                        ? 'success'
+                        : 'error'
+                    }
+                    size="small"
+                  />
+                </Box>
               </CardContent>
               <CardActions>
                 <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={() => handleRegister(tournament)}
-                  disabled={tournament.participants?.includes(user?.uid)}
+                  size="small"
+                  color="primary"
+                  onClick={() => handleViewDetails(tournament)}
                 >
-                  {tournament.participants?.includes(user?.uid)
-                    ? 'Registered'
-                    : 'Register Now'}
+                  View Details
                 </Button>
+                {tournament.status === 'upcoming' && (
+                  <Button
+                    size="small"
+                    color="secondary"
+                    onClick={() => handleRegister(tournament)}
+                    disabled={loading || tournament.participants?.includes(user?.uid)}
+                  >
+                    {tournament.participants?.includes(user?.uid)
+                      ? 'Registered'
+                      : 'Register Now'}
+                  </Button>
+                )}
               </CardActions>
             </Card>
           </Grid>

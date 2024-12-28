@@ -1,67 +1,52 @@
-import { db, doc, collection, setDoc, serverTimestamp } from '../firebase';
-
-const NOTIFICATION_SOUNDS = {
-  default: '/sounds/notification.mp3',
-  success: '/sounds/success.mp3',
-  warning: '/sounds/warning.mp3',
-  error: '/sounds/error.mp3',
-};
-
-const NOTIFICATION_ICONS = {
-  wallet: '/icons/wallet.png',
-  tournament: '/icons/tournament.png',
-  game: '/icons/game.png',
-  user: '/icons/user.png',
-  default: '/logo192.png',
-};
+import { db, doc, collection, setDoc, serverTimestamp, deleteDoc, updateDoc, getDocs } from '../firebase';
 
 class NotificationService {
-  static audio = new Audio();
+  static swRegistration = null;
 
-  static playSound(type = 'default') {
+  static async registerServiceWorker() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.warn('Push messaging is not supported');
+      return false;
+    }
+
     try {
-      this.audio.src = NOTIFICATION_SOUNDS[type] || NOTIFICATION_SOUNDS.default;
-      this.audio.play();
+      // Unregister any existing service workers first
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+      }
+
+      // Register new service worker
+      const registration = await navigator.serviceWorker.register('/serviceWorker.js', {
+        scope: '/',
+        type: 'module',
+        updateViaCache: 'none'
+      });
+
+      // Wait for the service worker to be activated
+      await navigator.serviceWorker.ready;
+      
+      this.swRegistration = registration;
+      console.log('Service Worker registered successfully');
+      return true;
     } catch (error) {
-      console.error('Error playing notification sound:', error);
+      console.error('Service Worker registration failed:', error);
+      return false;
     }
   }
 
   static async requestPermission() {
     try {
+      // Register service worker first
+      await this.registerServiceWorker();
+
+      // Request notification permission
       const permission = await Notification.requestPermission();
       return permission === 'granted';
     } catch (error) {
       console.error('Error requesting notification permission:', error);
       return false;
     }
-  }
-
-  static getNotificationOptions(type, message) {
-    return {
-      body: message,
-      icon: NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS.default,
-      badge: NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS.default,
-      image: NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS.default,
-      vibrate: [200, 100, 200], // Vibration pattern
-      timestamp: Date.now(),
-      requireInteraction: true,
-      actions: [
-        {
-          action: 'view',
-          title: 'View',
-        },
-        {
-          action: 'close',
-          title: 'Close',
-        },
-      ],
-      // Add custom styling
-      dir: 'auto',
-      silent: false, // We'll play our own sound
-      renotify: true, // Show each notification separately
-      tag: type, // Group similar notifications
-    };
   }
 
   static async createNotification(userId, title, message, type, soundType = 'default') {
@@ -77,45 +62,36 @@ class NotificationService {
         createdAt: serverTimestamp(),
       });
 
-      // Show browser notification if permission is granted
-      if (Notification.permission === 'granted') {
-        // Play sound
-        this.playSound(soundType);
-
-        // Create and show notification
-        const notification = new Notification(title, this.getNotificationOptions(type, message));
-
-        // Handle notification interactions
-        notification.onclick = (event) => {
-          event.preventDefault();
-          if (event.action === 'view') {
-            // Handle view action
-            window.focus();
-            // Navigate based on type
-            switch (type) {
-              case 'wallet':
-                window.location.href = '/wallet';
-                break;
-              case 'tournament':
-                window.location.href = '/tournaments';
-                break;
-              case 'game':
-                window.location.href = '/game-center';
-                break;
-              case 'user':
-                window.location.href = '/profile';
-                break;
-              default:
-                window.location.href = '/';
-            }
-          }
-          notification.close();
+      // Show browser notification if permission is granted and service worker is registered
+      if (Notification.permission === 'granted' && this.swRegistration) {
+        const options = {
+          body: message,
+          icon: `/icons/${type}.png`,
+          badge: `/icons/${type}.png`,
+          vibrate: [200, 100, 200],
+          tag: type, // Group similar notifications
+          renotify: true, // Show each notification separately even with same tag
+          data: {
+            type,
+            url: this.getNotificationUrl(type),
+            timestamp: Date.now(),
+          },
+          actions: [
+            {
+              action: 'view',
+              title: 'View',
+            },
+            {
+              action: 'close',
+              title: 'Close',
+            },
+          ],
+          // Add custom styling
+          dir: 'auto',
+          requireInteraction: true,
         };
 
-        notification.onclose = () => {
-          // Handle notification close
-          console.log('Notification closed');
-        };
+        await this.swRegistration.showNotification(title, options);
       }
 
       return true;
@@ -125,36 +101,111 @@ class NotificationService {
     }
   }
 
+  static getNotificationUrl(type) {
+    switch (type) {
+      case 'wallet':
+        return '/wallet';
+      case 'tournament':
+        return '/tournaments';
+      case 'game':
+        return '/game-center';
+      case 'user':
+        return '/profile';
+      default:
+        return '/';
+    }
+  }
+
   static async sendWalletNotification(userId, type, amount, status) {
     const title = `💰 Wallet ${type} ${status}`;
     const message = `Your ${type} request for $${amount} has been ${status}. ${
       status === 'approved' ? '✅' : '❌'
     }`;
-    return this.createNotification(
-      userId, 
-      title, 
-      message, 
-      'wallet',
-      status === 'approved' ? 'success' : 'warning'
-    );
+    return this.createNotification(userId, title, message, 'wallet');
   }
 
   static async sendTournamentNotification(userId, tournamentName, action) {
     const title = `🏆 Tournament Update`;
     const message = `Tournament "${tournamentName}" ${action}`;
-    return this.createNotification(userId, title, message, 'tournament', 'default');
+    return this.createNotification(userId, title, message, 'tournament');
   }
 
   static async sendGameNotification(userId, gameName, action) {
     const title = `🎮 Game Update`;
     const message = `Game "${gameName}" ${action}`;
-    return this.createNotification(userId, title, message, 'game', 'default');
+    return this.createNotification(userId, title, message, 'game');
   }
 
   static async sendUserNotification(userId, action) {
     const title = `👤 Account Update`;
     const message = `Your account has been ${action}`;
-    return this.createNotification(userId, title, message, 'user', 'default');
+    return this.createNotification(userId, title, message, 'user');
+  }
+
+  static async deleteNotification(notificationId) {
+    try {
+      const notificationRef = doc(db, 'notifications', notificationId);
+      await deleteDoc(notificationRef);
+      return true;
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      return false;
+    }
+  }
+
+  static async updateNotification(notificationId, updates) {
+    try {
+      const notificationRef = doc(db, 'notifications', notificationId);
+      await updateDoc(notificationRef, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      });
+      return true;
+    } catch (error) {
+      console.error('Error updating notification:', error);
+      return false;
+    }
+  }
+
+  static async markAsRead(notificationId) {
+    try {
+      const notificationRef = doc(db, 'notifications', notificationId);
+      await updateDoc(notificationRef, {
+        read: true,
+        readAt: serverTimestamp(),
+      });
+      return true;
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      return false;
+    }
+  }
+
+  static async sendAdminNotification(title, message, type = 'announcement', priority = 'normal') {
+    try {
+      // Get all users
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const sendPromises = [];
+
+      usersSnapshot.forEach((userDoc) => {
+        const userId = userDoc.id;
+        sendPromises.push(
+          this.createNotification(
+            userId,
+            title,
+            message,
+            'admin',
+            priority
+          )
+        );
+      });
+
+      await Promise.all(sendPromises);
+      return true;
+    } catch (error) {
+      console.error('Error sending admin notifications:', error);
+      return false;
+    }
   }
 }
 

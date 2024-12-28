@@ -1,134 +1,199 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
-  Box,
+  Paper,
   Typography,
   TextField,
   Button,
-  CircularProgress,
-  Divider,
+  Box,
+  IconButton,
+  InputAdornment,
   Alert,
+  CircularProgress,
 } from '@mui/material';
-import { register, signInWithGoogle } from '../../redux/actions/authAction';
-import GoogleIcon from '@mui/icons-material/Google';
-import useAdmin from '../../hooks/useAdmin';
+import {
+  Visibility,
+  VisibilityOff,
+  Person,
+} from '@mui/icons-material';
+import { register } from '../../redux/actions/authAction';
 
 const Register = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    username: '',
-  });
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error, user } = useSelector((state) => state.auth);
-  const { isAdmin } = useAdmin();
-
-  useEffect(() => {
-    if (user) {
-      if (isAdmin) {
-        navigate('/admin');
-      } else {
-        navigate('/home');
-      }
-    }
-  }, [user, isAdmin, navigate]);
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      await dispatch(register(formData.email, formData.password, formData.username));
-    } catch (error) {
-      console.error('Registration error:', error);
-    }
-  };
+    setError('');
 
-  const handleGoogleSignIn = async () => {
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    // Validate password strength
+    if (formData.password.length < 6) {
+      setError('Password should be at least 6 characters long');
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      await dispatch(signInWithGoogle());
+      const result = await dispatch(register(formData.email, formData.password, formData.username));
+      // Navigate based on user role
+      if (result && result.isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
     } catch (error) {
-      console.error('Google sign-in error:', error);
+      setError(error.message || 'Failed to register. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Typography component="h1" variant="h5">
-          Register
-        </Typography>
-        {error && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{error}</Alert>}
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="Username"
-            name="username"
-            autoComplete="username"
-            autoFocus
-            value={formData.username}
-            onChange={handleChange}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="Email Address"
-            name="email"
-            autoComplete="email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label="Password"
-            type="password"
-            autoComplete="new-password"
-            value={formData.password}
-            onChange={handleChange}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={24} /> : 'Register'}
-          </Button>
-          <Divider sx={{ my: 2 }}>or</Divider>
-          <Button
-            fullWidth
-            variant="outlined"
-            startIcon={<GoogleIcon />}
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-          >
-            Continue with Google
-          </Button>
+    <Container maxWidth="sm">
+      <Box sx={{ mt: 8, mb: 4 }}>
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+          <Typography variant="h4" align="center" gutterBottom fontWeight="bold" color="primary">
+            Create Account
+          </Typography>
+          <Typography variant="body1" align="center" color="text.secondary" paragraph>
+            Join our gaming community today
+          </Typography>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <TextField
+              fullWidth
+              label="Username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              margin="normal"
+              variant="outlined"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Person />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              fullWidth
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              margin="normal"
+              variant="outlined"
+            />
+
+            <TextField
+              fullWidth
+              label="Password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={handleChange}
+              required
+              margin="normal"
+              variant="outlined"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <TextField
+              fullWidth
+              label="Confirm Password"
+              name="confirmPassword"
+              type={showPassword ? 'text' : 'password'}
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              margin="normal"
+              variant="outlined"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              disabled={loading}
+              sx={{ mt: 3, mb: 2, py: 1.2 }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Create Account'}
+            </Button>
+          </form>
+
           <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Link to="/login" style={{ textDecoration: 'none' }}>
-              Already have an account? Sign in
-            </Link>
+            <Typography variant="body2" color="text.secondary">
+              Already have an account?{' '}
+              <Button
+                color="primary"
+                onClick={() => navigate('/login')}
+                sx={{ textTransform: 'none' }}
+              >
+                Sign in
+              </Button>
+            </Typography>
           </Box>
-        </Box>
+        </Paper>
       </Box>
     </Container>
   );

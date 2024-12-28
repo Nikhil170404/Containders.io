@@ -29,16 +29,16 @@ import AdminTransaction from './components/Admin/AdminTransaction';
 
 // User Components
 import UserHome from './components/User/UserHome';
-import GameCenter from './components/GameCenter/GameCenter';
-import Tournaments from './components/Tournaments/Tournaments';
 import Teams from './components/Teams/Teams';
 import Community from './components/Community/Community';
 import LiveStreams from './components/Streams/LiveStreams';
 import Analytics from './components/Analytics/Analytics';
-import Academy from './components/Academy/Academy';
 import Settings from './components/Settings/Settings';
 import Wallet from './components/Wallet/Wallet';
 import NotFound from './components/NotFound/NotFound';
+import Tournaments from './components/Tournaments/Tournaments';
+import TournamentDetails from './components/Tournaments/TournamentDetails';
+import UserNotifications from './components/User/UserNotifications';
 
 // Custom Hooks
 import useAdmin from './hooks/useAdmin';
@@ -86,6 +86,8 @@ const PublicRoute = ({ children }) => {
 
 function App() {
   const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const { isAdmin } = useAdmin();
 
   useEffect(() => {
     dispatch(setUserFromLocalStorage());
@@ -108,34 +110,20 @@ function App() {
 
                 {/* User Routes */}
                 <Route path="/home" element={<UserRoute><UserHome /></UserRoute>} />
-                <Route path="/game-center" element={<UserRoute><GameCenter /></UserRoute>} />
-                <Route path="/tournaments" element={<UserRoute><Tournaments /></UserRoute>} />
                 <Route path="/teams" element={<UserRoute><Teams /></UserRoute>} />
                 <Route path="/community" element={<UserRoute><Community /></UserRoute>} />
                 <Route path="/streams" element={<UserRoute><LiveStreams /></UserRoute>} />
                 <Route path="/analytics" element={<UserRoute><Analytics /></UserRoute>} />
-                <Route path="/academy" element={<UserRoute><Academy /></UserRoute>} />
                 <Route path="/profile" element={<UserRoute><Profile /></UserRoute>} />
                 <Route path="/settings" element={<UserRoute><Settings /></UserRoute>} />
                 <Route path="/wallet" element={<UserRoute><Wallet /></UserRoute>} />
+                <Route path="/tournaments" element={<UserRoute><Tournaments /></UserRoute>} />
+                <Route path="/tournament/:id" element={<UserRoute><TournamentDetails /></UserRoute>} />
+                <Route path="/notifications" element={<UserRoute><UserNotifications /></UserRoute>} />
 
                 {/* Admin Routes */}
-                <Route
-                  path="/admin"
-                  element={
-                    <AdminRoute>
-                      <AdminDashboard />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/wallet-requests"
-                  element={
-                    <AdminRoute>
-                      <AdminWalletRequests />
-                    </AdminRoute>
-                  }
-                />
+                <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                <Route path="/admin/wallet-requests" element={<AdminRoute><AdminWalletRequests /></AdminRoute>} />
                 <Route path="/admin/tournaments" element={<AdminRoute><TournamentManagement /></AdminRoute>} />
                 <Route path="/admin/games" element={<AdminRoute><GameManagement /></AdminRoute>} />
                 <Route path="/admin/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
@@ -144,8 +132,14 @@ function App() {
                 <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
                 <Route path="/admin/transactions" element={<AdminRoute><AdminTransaction /></AdminRoute>} />
 
-                {/* 404 Route */}
-                <Route path="*" element={<NotFound />} />
+                {/* Default Route - Redirect based on auth status */}
+                <Route path="*" element={
+                  user ? (
+                    <Navigate to={isAdmin ? '/admin' : '/home'} replace />
+                  ) : (
+                    <NotFound />
+                  )
+                } />
               </Routes>
             </Box>
           </Box>

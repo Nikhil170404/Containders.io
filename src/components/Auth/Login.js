@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
 import {
   Container,
   Paper,
@@ -8,156 +8,170 @@ import {
   TextField,
   Button,
   Box,
-  CircularProgress,
-  Alert,
+  Divider,
   IconButton,
   InputAdornment,
-  Divider,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
-import { Visibility, VisibilityOff, Google as GoogleIcon, SportsEsports } from '@mui/icons-material';
+import {
+  Visibility,
+  VisibilityOff,
+  Google as GoogleIcon,
+} from '@mui/icons-material';
 import { login, signInWithGoogle } from '../../redux/actions/authAction';
-import useAdmin from '../../hooks/useAdmin';
 
 const Login = () => {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { loading, error: authError, user } = useSelector((state) => state.auth);
-  const { isAdmin } = useAdmin();
-  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    setError('');
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      if (isAdmin) {
-        navigate('/admin');
-      } else {
-        navigate('/home');
-      }
-    }
-  }, [user, isAdmin, navigate]);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    if (!formData.email || !formData.password) {
-      setError('Please fill in all fields');
-      return;
-    }
+    setLoading(true);
 
     try {
-      await dispatch(login(formData.email, formData.password));
-    } catch (err) {
-      setError(err.message);
+      const result = await dispatch(login(formData.email, formData.password));
+      // Navigate based on user role
+      if (result && result.isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
+    } catch (error) {
+      setError(error.message || 'Failed to login. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
+    setError('');
+    setLoading(true);
+
     try {
-      await dispatch(signInWithGoogle());
-    } catch (err) {
-      setError(err.message);
+      const result = await dispatch(signInWithGoogle());
+      // Navigate based on user role
+      if (result && result.isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
+    } catch (error) {
+      setError('Failed to sign in with Google. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8, mb: 4 }}>
-      <Paper elevation={3} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <SportsEsports sx={{ fontSize: 40, color: 'primary.main' }} />
-          <Typography variant="h4" component="h1" gutterBottom>
-            Login
+    <Container maxWidth="sm">
+      <Box sx={{ mt: 8, mb: 4 }}>
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+          <Typography variant="h4" align="center" gutterBottom fontWeight="bold" color="primary">
+            Welcome Back
           </Typography>
-        </Box>
+          <Typography variant="body1" align="center" color="text.secondary" paragraph>
+            Sign in to continue to your account
+          </Typography>
 
-        {(error || authError) && (
-          <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-            {error || authError}
-          </Alert>
-        )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
-        <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-          <TextField
-            fullWidth
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            margin="normal"
-            required
-            autoComplete="email"
-          />
+          <form onSubmit={handleSubmit}>
+            <TextField
+              fullWidth
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              margin="normal"
+              variant="outlined"
+            />
 
-          <TextField
-            fullWidth
-            label="Password"
-            name="password"
-            type={showPassword ? 'text' : 'password'}
-            value={formData.password}
-            onChange={handleChange}
-            margin="normal"
-            required
-            autoComplete="current-password"
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => setShowPassword(!showPassword)}
-                    edge="end"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
+            <TextField
+              fullWidth
+              label="Password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={handleChange}
+              required
+              margin="normal"
+              variant="outlined"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              disabled={loading}
+              sx={{ mt: 3, mb: 2, py: 1.2 }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Sign In'}
+            </Button>
+          </form>
+
+          <Divider sx={{ my: 2 }}>OR</Divider>
 
           <Button
-            type="submit"
             fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
+            variant="outlined"
+            size="large"
+            onClick={handleGoogleSignIn}
             disabled={loading}
+            startIcon={<GoogleIcon />}
+            sx={{ mb: 2, py: 1.2 }}
           >
-            {loading ? <CircularProgress size={24} /> : 'Login'}
+            Sign in with Google
           </Button>
-        </form>
 
-        <Divider sx={{ width: '100%', my: 2 }}>OR</Divider>
-
-        <Button
-          fullWidth
-          variant="outlined"
-          startIcon={<GoogleIcon />}
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-        >
-          Sign in with Google
-        </Button>
-
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="body2" align="center">
-            Don't have an account?{' '}
-            <Button color="primary" onClick={() => navigate('/register')}>
-              Register
-            </Button>
-          </Typography>
-        </Box>
-      </Paper>
+          <Box sx={{ mt: 2, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              Don't have an account?{' '}
+              <Button
+                color="primary"
+                onClick={() => navigate('/register')}
+                sx={{ textTransform: 'none' }}
+              >
+                Sign up
+              </Button>
+            </Typography>
+          </Box>
+        </Paper>
+      </Box>
     </Container>
   );
 };

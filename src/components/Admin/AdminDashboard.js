@@ -7,6 +7,8 @@ import {
   Box,
   Card,
   CardContent,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   AccountBalanceWallet as WalletIcon,
@@ -18,6 +20,7 @@ import { db, collection, query, where, onSnapshot } from '../../firebase';
 import { useNavigate } from 'react-router-dom';
 import NotificationComponent from '../Notifications/NotificationComponent';
 import AdminLayout from './AdminLayout';
+import AdminNotifications from './AdminNotifications';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -28,6 +31,7 @@ const AdminDashboard = () => {
     activeTournaments: 0,
   });
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('wallet');
 
   useEffect(() => {
     // Listen to deposit requests
@@ -115,41 +119,55 @@ const AdminDashboard = () => {
           <NotificationComponent />
         </Box>
         
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={4}>
-            <StatCard
-              title="Pending Wallet Requests"
-              value={stats.pendingDeposits + stats.pendingWithdrawals}
-              icon={WalletIcon}
-              onClick={() => navigate('/admin/wallet-requests')}
-              badge={stats.pendingDeposits + stats.pendingWithdrawals}
-            />
+        <Tabs value={activeTab} onChange={(e, value) => setActiveTab(value)}>
+          <Tab label="Wallet Requests" value="wallet" />
+          <Tab label="Tournaments" value="tournaments" />
+          <Tab label="Users" value="users" />
+          <Tab label="Games" value="games" />
+          <Tab label="Notifications" value="notifications" />
+        </Tabs>
+        
+        {activeTab === 'wallet' && (
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={4}>
+              <StatCard
+                title="Pending Wallet Requests"
+                value={stats.pendingDeposits + stats.pendingWithdrawals}
+                icon={WalletIcon}
+                onClick={() => navigate('/admin/wallet-requests')}
+                badge={stats.pendingDeposits + stats.pendingWithdrawals}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <StatCard
+                title="Total Users"
+                value={stats.totalUsers}
+                icon={UserIcon}
+                onClick={() => navigate('/admin/users')}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <StatCard
+                title="Active Games"
+                value={stats.activeGames}
+                icon={GameIcon}
+                onClick={() => navigate('/admin/games')}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <StatCard
+                title="Active Tournaments"
+                value={stats.activeTournaments}
+                icon={TournamentIcon}
+                onClick={() => navigate('/admin/tournaments')}
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <StatCard
-              title="Total Users"
-              value={stats.totalUsers}
-              icon={UserIcon}
-              onClick={() => navigate('/admin/users')}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <StatCard
-              title="Active Games"
-              value={stats.activeGames}
-              icon={GameIcon}
-              onClick={() => navigate('/admin/games')}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <StatCard
-              title="Active Tournaments"
-              value={stats.activeTournaments}
-              icon={TournamentIcon}
-              onClick={() => navigate('/admin/tournaments')}
-            />
-          </Grid>
-        </Grid>
+        )}
+        {activeTab === 'tournaments' && <div>TournamentManagement</div>}
+        {activeTab === 'users' && <div>UserManagement</div>}
+        {activeTab === 'games' && <div>GameManagement</div>}
+        {activeTab === 'notifications' && <AdminNotifications />}
       </Container>
     </AdminLayout>
   );
