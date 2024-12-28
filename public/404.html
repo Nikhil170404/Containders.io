@@ -4,13 +4,10 @@
     <meta charset="utf-8">
     <title>Containders.io</title>
     <script type="text/javascript">
-      var pathSegments = window.location.pathname.split('/');
-      var repoName = 'Containders.io';
       var l = window.location;
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        '/Containders.io/#' + 
-        pathSegments.slice(2).join('/')
+        '/#' + l.pathname.slice(1)
       );
     </script>
   </head>

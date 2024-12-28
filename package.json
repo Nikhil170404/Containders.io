@@ -1,7 +1,7 @@
 {
   "name": "containders",
   "version": "0.1.0",
-  "homepage": "https://nikhil170404.github.io/Containders.io",
+  "homepage": ".",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.13.3",

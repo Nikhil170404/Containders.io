@@ -97,7 +97,7 @@ function App() {
     <ThemeProvider theme={gameTheme}>
       <CssBaseline />
       <NotificationProvider>
-        <Router basename={process.env.PUBLIC_URL}>
+        <Router>
           <NotificationPermission />
           <Box sx={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
             <Navbar />
