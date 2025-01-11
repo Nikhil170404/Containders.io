@@ -4,14 +4,17 @@
     <meta charset="utf-8">
     <title>ServePro - Page Not Found</title>
     <script type="text/javascript">
-      var pathSegmentsToKeep = 1;
+      var repoName = "Containders.io";
       var l = window.location;
+      
+      // Store the current path before redirecting
+      var currentPath = l.pathname + l.search + l.hash;
+      sessionStorage.redirect = currentPath;
+
+      // Redirect to index.html
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
+        '/' + repoName + '/'
       );
     </script>
   </head>
